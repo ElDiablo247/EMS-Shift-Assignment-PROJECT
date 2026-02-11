@@ -1,0 +1,6 @@
+Deciding about all the software components that must be used. Until now I have identified:
+
+streamlit for the GUI which I will have to explore deeper, which is a risk because of it costing time
+sqlalchemy library for the database and managing data. Also using the sqlalchemy orm will be preffered rather than using raw SQL querries because even though it has a learning curve, eventually it will be more useful in the long run both for personal knowledge and for my career.
+Maybe pandas library for manipulating data in memory for function-specific purposes
+Docker to package the final app for shipping so it can run on the client's machine. This is also a risk because I have not worker with Docker so I have to explore the technology.
