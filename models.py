@@ -22,3 +22,4 @@ class Shifts(Base):
     shift_name = Column(String)
     shift_start = Column(String) 
     shift_end = Column(String) 
+    shift_duration = Column(Float)

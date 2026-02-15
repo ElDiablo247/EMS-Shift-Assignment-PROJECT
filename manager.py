@@ -12,7 +12,7 @@ class Manager:
         Creates a new employee object and saves it to the database.
         """
         
-        generated_id = self.id_generator() # Uses this class's own method to generate an ID
+        generated_id = self.employee_id_generator() # Uses this class's own method to generate an employee ID
 
         if not name:
             return False, "All fields must be populated."
@@ -33,20 +33,23 @@ class Manager:
         except Exception as e:
             return False, f"Error occurred: {e}"
 
-    def add_shift(self, shift_id, shift_name, shift_start, shift_end):
+    def add_shift(self, shift_name, shift_start, shift_end, shift_duration):
         """
         Creates a new shift object and saves it to the database.
         """
+        generated_id = self.shift_id_generator() # Uses this class's own method to generate a shift ID
+
         if not shift_name or not shift_start or not shift_end:
             return False, "All fields must be populated."
-
+        # A new shift object is created with the provided details and the generated ID.
         try:
             with self.db.get_session() as session:
                 new_shift = Shifts(
-                    id=shift_id,
+                    id=generated_id,
                     shift_name=shift_name,
                     shift_start=shift_start,
-                    shift_end=shift_end
+                    shift_end=shift_end,
+                    shift_duration=shift_duration
                 )
                 session.add(new_shift)
             return True, "Shift has been added."
@@ -80,14 +83,32 @@ class Manager:
         except Exception as e:
             return False, f"Error clearing database: {e}"
 
-    def id_generator(self):
+    def employee_id_generator(self):
         """
-        Generates an ID for a new employee by finding the current maximum ID in the database and adding 1.
+        Sets the employee_id for a new employee. Starts at 6001 if no employees exist, else increments from the highest existing ID in the employees table.
         """
         try:
             with self.db.get_session() as session:
                 max_id = session.query(Employee).order_by(Employee.id.desc()).first()
-                return (max_id.id + 1) if max_id else 1
+                if max_id:
+                    return max_id.id + 1
+                else:   
+                    return 6001
         except Exception as e:
             print(f"Error generating ID: {e}")
-            return 1   
+            return 6001
+        
+    def shift_id_generator(self):
+        """
+        Sets the shift_id for a new shift. Starts at 1 if no shifts exist, else increments from the highest existing ID in the shifts table.
+        """
+        try:
+            with self.db.get_session() as session:
+                max_id = session.query(Shifts).order_by(Shifts.id.desc()).first()
+                if max_id:
+                    return max_id.id + 1
+                else:   
+                    return 1
+        except Exception as e:
+            print(f"Error generating ID: {e}")
+            return 1
