@@ -1,5 +1,8 @@
 from sqlalchemy import Column, Integer, String, Float
-from database import Base
+from sqlalchemy.orm import DeclarativeBase
+
+class Base(DeclarativeBase):
+    pass
 
 # Definition of the tables. We have an employees table and a shifts table. Each class corresponds to a table in the database, and the attributes correspond to columns.
 class Employee(Base):
