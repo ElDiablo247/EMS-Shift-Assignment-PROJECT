@@ -1,5 +1,5 @@
-from database import db_obj
-from models import Employee, Shifts
+from logic.database import db_obj
+from logic.models import Employee, Shifts, Assignments
 import pandas as pd
 
 class Manager:
@@ -7,7 +7,7 @@ class Manager:
         self.db = db_obj
 
 
-    def add_employee(self, name, hours_required, qualification, contract_type):
+    def add_employee(self, name, qualification, contract_type):
         """
         Creates a new employee object and saves it to the database.
         """
@@ -23,8 +23,6 @@ class Manager:
                 new_staff = Employee(
                     id=generated_id,
                     name=name,
-                    hours_required=hours_required,
-                    hours_completed=0.0,
                     qualification=qualification,
                     contract_type=contract_type
                 )

@@ -1,7 +1,7 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
-from models import Base
+from logic.models import Base
 
 class Database:
     def __init__(self, db_url='sqlite:///ems_database.db'):
