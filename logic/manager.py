@@ -1,5 +1,5 @@
 from logic.database import db_obj
-from logic.models import Employee, Shifts, Assignments
+from logic.models import Employee, Shifts
 import pandas as pd
 
 class Manager:
@@ -11,11 +11,11 @@ class Manager:
         """
         Creates a new employee object and saves it to the database.
         """
-        
         generated_id = self.employee_id_generator() # Uses this class's own method to generate an employee ID
 
         if not name:
-            return False, "All fields must be populated."
+            print("Validation failed: The name field must be populated.")
+            return False
 
         # A new employee object is created with the provided details and the generated ID.
         try:
@@ -27,9 +27,11 @@ class Manager:
                     contract_type=contract_type
                 )
                 session.add(new_staff)
-            return True, "Employee has been added."
+            return True
         except Exception as e:
-            return False, f"Error occurred: {e}"
+            print(f"Error adding employee: {e}")
+            return False
+
 
     def add_shift(self, shift_name, shift_start, shift_end, shift_duration):
         """
@@ -38,7 +40,8 @@ class Manager:
         generated_id = self.shift_id_generator() # Uses this class's own method to generate a shift ID
 
         if not shift_name or not shift_start or not shift_end:
-            return False, "All fields must be populated."
+            print("Validation failed: All shift fields must be populated.")
+            return False
         # A new shift object is created with the provided details and the generated ID.
         try:
             with self.db.get_session() as session:
@@ -50,9 +53,11 @@ class Manager:
                     shift_duration=shift_duration
                 )
                 session.add(new_shift)
-            return True, "Shift has been added."
+            return True
         except Exception as e:
-            return False, f"Error occurred: {e}"
+            print(f"Error adding shift: {e}")
+            return False
+
 
     def get_all_employees(self):
         """
@@ -62,7 +67,8 @@ class Manager:
             query = session.query(Employee).order_by(Employee.id)
             # Using pandas to convert the SQLAlchemy query result into a DataFrame for easier display in Streamlit
             return pd.read_sql(query.statement, session.bind)
-        
+
+
     def get_all_shifts(self):
         """
         Retrieves all shifts from the database and formats them for display.
@@ -70,16 +76,29 @@ class Manager:
         with self.db.get_session() as session:
             query = session.query(Shifts).order_by(Shifts.shift_name)
             return pd.read_sql(query.statement, session.bind)
-        
-    def empty_database(self):
-        """Wipes all data from the tables."""
+
+
+    def empty_employee_database(self):
+        """Wipes all data from the employees table."""
         try:
             with self.db.get_session() as session:
                 session.query(Employee).delete()
-                session.query(Shifts).delete()
-            return True, "All data has been cleared."
+            return True
         except Exception as e:
-            return False, f"Error clearing database: {e}"
+            print(f"Error clearing Employees database: {e}")
+            return False
+
+
+    def empty_shifts_database(self):
+        """Wipes all data from the shifts table."""
+        try:
+            with self.db.get_session() as session:
+                session.query(Shifts).delete()
+            return True
+        except Exception as e:
+            print(f"Error clearing Shifts database: {e}")
+            return False
+
 
     def employee_id_generator(self):
         """
@@ -95,7 +114,8 @@ class Manager:
         except Exception as e:
             print(f"Error generating ID: {e}")
             return 6001
-        
+
+
     def shift_id_generator(self):
         """
         Sets the shift_id for a new shift. Starts at 1 if no shifts exist, else increments from the highest existing ID in the shifts table.
@@ -110,3 +130,41 @@ class Manager:
         except Exception as e:
             print(f"Error generating ID: {e}")
             return 1
+
+
+    def update_employees(self, employees_df):
+        """
+        Updates employee records based on the edited DataFrame from the UI.
+        """
+        try:
+            with self.db.get_session() as session:
+                for _, row in employees_df.iterrows():
+                    # We use the ID to find the correct record
+                    employee = session.query(Employee).filter(Employee.id == row['id']).first()
+                    if employee:
+                        employee.name = row['name']
+                        employee.qualification = row['qualification']
+                        employee.contract_type = row['contract_type']
+            return True
+        except Exception as e:
+            print(f"Error updating data: {e}")
+            return False
+
+
+    def update_shifts(self, shifts_df):
+        """
+        Updates shift records based on the edited DataFrame from the UI.
+        """
+        try:
+            with self.db.get_session() as session:
+                for _, row in shifts_df.iterrows():
+                    shift = session.query(Shifts).filter(Shifts.id == row['id']).first()
+                    if shift:
+                        shift.shift_name = row['shift_name']
+                        shift.shift_start = row['shift_start']
+                        shift.shift_end = row['shift_end']
+                        shift.shift_duration = row['shift_duration']
+            return True
+        except Exception as e:
+            print(f"Error updating data: {e}")
+            return False

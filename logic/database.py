@@ -10,9 +10,15 @@ class Database:
         self._session_factory = sessionmaker(bind=self.engine)
         Base.metadata.create_all(self.engine)
 
+
     @contextmanager
     def get_session(self):
-        """Context manager for database sessions. Ensures proper handling of transactions and session closure."""
+        """
+        Context manager that handles the full lifecycle of a database session.
+        It automatically commits the transaction if the code block succeeds, rolls back if an exception occurs,
+        and ensures the session is always closed. This is much easier and safer than the alternative of manually 
+        writing try/except/finally blocks for commit, rollback, and close in every single database operation.
+        """
 
         session = self._session_factory()
         try:
