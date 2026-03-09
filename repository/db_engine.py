@@ -1,9 +1,9 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
-from logic.models import Base
+from repository.models import Base
 
-class Database:
+class DatabaseEngine:
     def __init__(self, db_url='sqlite:///ems_database.db'):
         
         self.engine = create_engine(db_url)
@@ -30,4 +30,4 @@ class Database:
         finally:
             session.close()
 
-db_obj = Database()
+db_obj = DatabaseEngine()

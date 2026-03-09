@@ -1,170 +1,74 @@
-from logic.database import db_obj
-from logic.models import Employee, Shifts
-import pandas as pd
+from repository.dao import DatabaseAccess
 
 class Manager:
     def __init__(self):
-        self.db = db_obj
+        self.dao = DatabaseAccess()
 
 
     def add_employee(self, name, qualification, contract_type):
         """
-        Creates a new employee object and saves it to the database.
+        Validates input, generates an ID, and calls DAO to save employee.
         """
-        generated_id = self.employee_id_generator() # Uses this class's own method to generate an employee ID
-
         if not name:
             print("Validation failed: The name field must be populated.")
             return False
 
-        # A new employee object is created with the provided details and the generated ID.
-        try:
-            with self.db.get_session() as session:
-                new_staff = Employee(
-                    id=generated_id,
-                    name=name,
-                    qualification=qualification,
-                    contract_type=contract_type
-                )
-                session.add(new_staff)
-            return True
-        except Exception as e:
-            print(f"Error adding employee: {e}")
-            return False
+        # ID Generation
+        last_id = self.dao.get_last_employee_id()
+        if last_id is not None:
+            new_id = last_id + 1
+        else:
+            new_id = 6001  # Starting ID for employees if database is empty
+        return self.dao.add_employee(new_id, name, qualification, contract_type)
 
 
     def add_shift(self, shift_name, shift_start, shift_end, shift_duration):
         """
-        Creates a new shift object and saves it to the database.
+        Validates input, generates an ID, and calls DAO to save shift.
         """
-        generated_id = self.shift_id_generator() # Uses this class's own method to generate a shift ID
-
         if not shift_name or not shift_start or not shift_end:
             print("Validation failed: All shift fields must be populated.")
             return False
-        # A new shift object is created with the provided details and the generated ID.
-        try:
-            with self.db.get_session() as session:
-                new_shift = Shifts(
-                    id=generated_id,
-                    shift_name=shift_name,
-                    shift_start=shift_start,
-                    shift_end=shift_end,
-                    shift_duration=shift_duration
-                )
-                session.add(new_shift)
-            return True
-        except Exception as e:
-            print(f"Error adding shift: {e}")
-            return False
+
+        # ID Generation
+        last_id = self.dao.get_last_shift_id()
+        if last_id is not None:
+            new_id = last_id + 1
+        else:
+            new_id = 101  # Starting ID for shifts if database is empty
+        return self.dao.add_shift(new_id, shift_name, shift_start, shift_end, shift_duration)
 
 
     def get_all_employees(self):
-        """
-        Retrieves all employees from the database and formats them for display.
-        """
-        with self.db.get_session() as session:
-            query = session.query(Employee).order_by(Employee.id)
-            # Using pandas to convert the SQLAlchemy query result into a DataFrame for easier display in Streamlit
-            return pd.read_sql(query.statement, session.bind)
+        """Pass-through to DAO"""
+        return self.dao.get_all_employees()
 
 
     def get_all_shifts(self):
-        """
-        Retrieves all shifts from the database and formats them for display.
-        """
-        with self.db.get_session() as session:
-            query = session.query(Shifts).order_by(Shifts.shift_name)
-            return pd.read_sql(query.statement, session.bind)
+        """Pass-through to DAO"""
+        return self.dao.get_all_shifts()
 
 
     def empty_employee_database(self):
-        """Wipes all data from the employees table."""
-        try:
-            with self.db.get_session() as session:
-                session.query(Employee).delete()
-            return True
-        except Exception as e:
-            print(f"Error clearing Employees database: {e}")
-            return False
+        """Pass-through to DAO"""
+        return self.dao.empty_employee_database()
 
 
     def empty_shifts_database(self):
-        """Wipes all data from the shifts table."""
-        try:
-            with self.db.get_session() as session:
-                session.query(Shifts).delete()
-            return True
-        except Exception as e:
-            print(f"Error clearing Shifts database: {e}")
-            return False
-
-
-    def employee_id_generator(self):
-        """
-        Sets the employee_id for a new employee. Starts at 6001 if no employees exist, else increments from the highest existing ID in the employees table.
-        """
-        try:
-            with self.db.get_session() as session:
-                max_id = session.query(Employee).order_by(Employee.id.desc()).first()
-                if max_id:
-                    return max_id.id + 1
-                else:   
-                    return 6001
-        except Exception as e:
-            print(f"Error generating ID: {e}")
-            return 6001
-
-
-    def shift_id_generator(self):
-        """
-        Sets the shift_id for a new shift. Starts at 1 if no shifts exist, else increments from the highest existing ID in the shifts table.
-        """
-        try:
-            with self.db.get_session() as session:
-                max_id = session.query(Shifts).order_by(Shifts.id.desc()).first()
-                if max_id:
-                    return max_id.id + 1
-                else:   
-                    return 1
-        except Exception as e:
-            print(f"Error generating ID: {e}")
-            return 1
+        """Pass-through to DAO"""
+        return self.dao.empty_shifts_database()
 
 
     def update_employees(self, employees_df):
         """
-        Updates employee records based on the edited DataFrame from the UI.
+        Passes the dataframe to DAO for updates. 
+        (Future business logic for updates would go here before calling DAO)
         """
-        try:
-            with self.db.get_session() as session:
-                for _, row in employees_df.iterrows():
-                    # We use the ID to find the correct record
-                    employee = session.query(Employee).filter(Employee.id == row['id']).first()
-                    if employee:
-                        employee.name = row['name']
-                        employee.qualification = row['qualification']
-                        employee.contract_type = row['contract_type']
-            return True
-        except Exception as e:
-            print(f"Error updating data: {e}")
-            return False
+        return self.dao.update_employees(employees_df)
 
 
     def update_shifts(self, shifts_df):
         """
-        Updates shift records based on the edited DataFrame from the UI.
+        Passes the dataframe to DAO for updates.
         """
-        try:
-            with self.db.get_session() as session:
-                for _, row in shifts_df.iterrows():
-                    shift = session.query(Shifts).filter(Shifts.id == row['id']).first()
-                    if shift:
-                        shift.shift_name = row['shift_name']
-                        shift.shift_start = row['shift_start']
-                        shift.shift_end = row['shift_end']
-                        shift.shift_duration = row['shift_duration']
-            return True
-        except Exception as e:
-            print(f"Error updating data: {e}")
-            return False
+        return self.dao.update_shifts(shifts_df)

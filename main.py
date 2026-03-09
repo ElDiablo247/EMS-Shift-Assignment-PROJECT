@@ -1,5 +1,4 @@
 import streamlit as st
-import pandas as pd
 from logic.manager import Manager
 
 class Homepage:
@@ -47,27 +46,6 @@ class Homepage:
                 st.rerun() 
             else:
                 st.sidebar.error("Failed to add shift. Check console for details.")
-
-
-    def add_employees_bulk(self):
-        """Handles bulk upload of employees via CSV"""
-        st.header("Upload CSV Employee File")
-
-        uploaded_file = st.file_uploader("Upload CSV", type=["csv"], key="emp_bulk_upload")
-        
-        if uploaded_file is not None:
-            if st.button("Process File"):
-                try:
-                    df = pd.read_csv(uploaded_file)
-                    success_count = 0
-
-                    for _, row in df.iterrows():
-                        if self.manager.add_employee(row['name'], row['qualification'], row['contract_type']):
-                            success_count += 1
-                    
-                    st.success(f"Success: {success_count}/{len(df)} employees added successfully.")
-                except Exception as e:
-                    st.error(f"Error processing file: {e}")
 
 
     def display_personnel(self):
@@ -168,13 +146,10 @@ class Homepage:
         self.add_employee_section()
         self.add_shift_section()
         
-        # Top row 50/50 split between main area and bulk upload of employees
+        # Top row 50/50 split between main area and shifts display
         col_top_left, col_top_right = st.columns(2)
         with col_top_left:
             self.render_main_area()
-            st.write("")
-            st.write("")
-            self.add_employees_bulk()
         with col_top_right:
             self.display_shifts()
 
