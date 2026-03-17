@@ -1,10 +1,61 @@
 from repository.db_engine import db_obj
-from repository.models import Employee, Shifts
+from repository.models import Employee, Shifts, Admin
 import pandas as pd
 
 class DatabaseAccess:
     def __init__(self):
         self.db = db_obj
+
+
+    def add_super_admin(self, username, password_hash, role):
+        """Adds a new admin user to the database with a 'super' role."""
+        try:
+            with self.db.get_session() as session:
+                new_admin = Admin(username=username, password_hash=password_hash, role=role)
+                session.add(new_admin)
+            return True
+        except Exception as e:
+            print(f"Error adding super admin: {e}")
+            return False
+
+
+    def add_basic_admin(self, username, password_hash, role):
+        """Adds a new admin user to the database with a 'basic' role."""
+        try:
+            with self.db.get_session() as session:
+                new_admin = Admin(username=username, password_hash=password_hash, role=role)
+                session.add(new_admin)
+            return True
+        except Exception as e:
+            print(f"Error adding basic admin: {e}")
+            return False
+
+
+    def get_admin_details(self, username):
+        """
+        Retrieves the hashed password and role for a given username.
+        By returning just the string hash, we avoid SQLAlchemy DetachedInstanceError
+        that can occur if the session is closed before related data is accessed, as per your previous experience.
+        """
+        try:
+            with self.db.get_session() as session:
+                admin = session.query(Admin).filter(Admin.username == username).first()
+                if admin:
+                    return admin.password_hash, admin.role
+                return None, None
+        except Exception as e:
+            print(f"Error retrieving admin details: {e}")
+            return None, None
+
+
+    def admins_exist(self):
+        """Checks if any admin exists in the admins table."""
+        try:
+            with self.db.get_session() as session:
+                return session.query(Admin).count() > 0
+        except Exception as e:
+            print(f"Error checking if admins table is empty: {e}")
+            return False
 
 
     def add_employee(self, emp_id, name, qualification, contract_type):
@@ -64,6 +115,13 @@ class DatabaseAccess:
         """
         with self.db.get_session() as session:
             query = session.query(Shifts).order_by(Shifts.shift_name)
+            return pd.read_sql(query.statement, session.bind)
+
+
+    def get_all_admins(self):
+        """Retrieves all admin records from the database and formats them for display."""
+        with self.db.get_session() as session:
+            query = session.query(Admin).order_by(Admin.id)
             return pd.read_sql(query.statement, session.bind)
 
 
@@ -128,12 +186,12 @@ class DatabaseAccess:
         try:
             with self.db.get_session() as session:
                 for _, row in employees_df.iterrows():
-                    # We use the ID to find the correct record
-                    employee = session.query(Employee).filter(Employee.id == row['id']).first()
-                    if employee:
-                        employee.name = row['name']
-                        employee.qualification = row['qualification']
-                        employee.contract_type = row['contract_type']
+                    if pd.notna(row['id']):
+                        employee = session.query(Employee).filter(Employee.id == row['id']).first()
+                        if employee:
+                            employee.name = row['name']
+                            employee.qualification = row['qualification']
+                            employee.contract_type = row['contract_type']
             return True
         except Exception as e:
             print(f"Error updating data: {e}")
@@ -147,12 +205,13 @@ class DatabaseAccess:
         try:
             with self.db.get_session() as session:
                 for _, row in shifts_df.iterrows():
-                    shift = session.query(Shifts).filter(Shifts.id == row['id']).first()
-                    if shift:
-                        shift.shift_name = row['shift_name']
-                        shift.shift_start = row['shift_start']
-                        shift.shift_end = row['shift_end']
-                        shift.shift_duration = row['shift_duration']
+                    if pd.notna(row['id']):
+                        shift = session.query(Shifts).filter(Shifts.id == row['id']).first()
+                        if shift:
+                            shift.shift_name = row['shift_name']
+                            shift.shift_start = row['shift_start']
+                            shift.shift_end = row['shift_end']
+                            shift.shift_duration = row['shift_duration']
             return True
         except Exception as e:
             print(f"Error updating data: {e}")

@@ -21,3 +21,11 @@ class Shifts(Base):
     shift_start = Column(Time) 
     shift_end = Column(Time) 
     shift_duration = Column(Float)
+
+class Admin(Base):
+    __tablename__ = 'admins'
+    
+    id = Column(Integer, primary_key=True)
+    username = Column(String, unique=True, nullable=False)
+    password_hash = Column(String, nullable=False)
+    role = Column(String, nullable=False) # 'super' or 'basic'

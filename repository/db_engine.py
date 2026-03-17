@@ -3,6 +3,7 @@ from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
 from repository.models import Base
 
+
 class DatabaseEngine:
     def __init__(self, db_url='sqlite:///ems_database.db'):
         
@@ -29,5 +30,6 @@ class DatabaseEngine:
             raise
         finally:
             session.close()
+
 
 db_obj = DatabaseEngine()
