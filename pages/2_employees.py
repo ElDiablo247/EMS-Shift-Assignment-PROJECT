@@ -18,12 +18,13 @@ class EmployeePage:
         contract_type = st.selectbox("Contract Type", ["Full-Time", "Part-Time"])
         
         if st.button("Add to System"):
-            if self.manager.add_employee(name, qualification, contract_type):
-                st.success(f"{name} has been added.")
+            success, message = self.manager.add_employee(name, qualification, contract_type)
+            if success:
+                st.success(message)
                 time.sleep(1.5)
                 st.rerun()
             else:
-                st.error("Failed to add employee.")
+                st.error(f"Failed to add employee: {message}")
 
 
     def display_employee_table(self):

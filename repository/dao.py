@@ -58,6 +58,22 @@ class DatabaseAccess:
             return False
 
 
+    def delete_admin(self, admin_id):
+        """Deletes an admin from the database based on their ID."""
+        try:
+            with self.db.get_session() as session:
+                admin_to_delete = session.query(Admin).filter(Admin.id == admin_id).first()
+                if admin_to_delete:
+                    session.delete(admin_to_delete)
+                    return True
+                else:
+                    print(f"Admin with ID {admin_id} not found.")
+                    return False
+        except Exception as e:
+            print(f"Error deleting admin: {e}")
+            return False
+
+
     def add_employee(self, emp_id, name, qualification, contract_type):
         """
         Creates a new employee object and saves it to the database.

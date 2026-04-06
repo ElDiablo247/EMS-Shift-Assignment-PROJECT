@@ -46,6 +46,7 @@ class Homepage:
                 else:
                     st.error(message)
 
+
     def run(self):
         """Handles the main logic flow for the Log in/Registration process, including access control and rendering."""
         if st.session_state.get("logged_in"):

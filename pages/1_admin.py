@@ -19,12 +19,13 @@ class AdminPage:
         role = st.selectbox("Role", ["basic"])
         
         if st.button("Add to System"):
-            if self.manager.register_basic_admin(username, password, role):
-                st.success(f"{username} has been added as an admin.")
+            success, message = self.manager.register_basic_admin(username, password, role)
+            if success:
+                st.success(message)
                 time.sleep(1.5)
                 st.rerun()
             else:
-                st.error("Failed to add admin.")
+                st.error(message)
 
 
     def bulk_upload_section(self):
@@ -52,7 +53,7 @@ class AdminPage:
 
     def display_admins_table(self):
         """Displays the admins with a custom layout and delete buttons."""
-        st.header("Manage Admins")
+        st.header("Registered Admins")
         admins_df = self.manager.get_all_admins()
         
         if admins_df.empty:
@@ -70,6 +71,23 @@ class AdminPage:
             width='stretch',
             hide_index=True
         )
+
+
+    def delete_admin_section(self):
+        st.header("Delete Admin Account")
+        with st.form("delete_admin_form", clear_on_submit=True):
+            id_to_delete = st.number_input("Admin ID", value=None, placeholder="Enter the ID of the admin to delete. 1 is not deletable.")
+            submitted = st.form_submit_button("Delete Admin")
+            if submitted:
+                if id_to_delete == 1:
+                    st.error("Cannot delete the default super admin.")
+                    return
+                if self.manager.delete_admin(id_to_delete):
+                    st.success(f"Admin with ID {id_to_delete} has been deleted.")
+                    time.sleep(1.5)
+                    st.rerun()
+                else:
+                    st.error("Failed to delete admin. Please check the ID and try again.")
 
 
     def render_page(self):
@@ -98,7 +116,7 @@ class AdminPage:
                 self.display_admins_table()
         with bottom_right:
             with st.container(border=True):
-                st.empty() # Leaves the box empty but visible for the future feature
+                self.delete_admin_section()
 
 
 if __name__ == "__main__":

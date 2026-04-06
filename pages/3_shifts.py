@@ -19,12 +19,13 @@ class ShiftPage:
         duration = st.number_input("Duration (hours)", max_value=12.0, step=0.5)
         
         if st.button("Add Shift"):
-            if self.manager.add_shift(name, start, end, duration):
-                st.success("Shift added.")
+            success, message = self.manager.add_shift(name, start, end, duration)
+            if success:
+                st.success(message)
                 time.sleep(1.5)
                 st.rerun()
             else:
-                st.error("Failed to add shift.")
+                st.error(f"Failed to add shift: {message}")
 
 
     def display_shift_table(self):

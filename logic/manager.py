@@ -70,13 +70,17 @@ class Manager:
         return success
 
 
+    def delete_admin(self, admin_id):
+        """Asks DAO to delete an admin using their ID. If DAO returns True, deletion was successful, otherwise it failed."""
+        return self.dao.delete_admin(admin_id)
+
+
     def add_employee(self, name, qualification, contract_type):
         """
         Validates input, generates an ID, and calls DAO to save employee.
         """
         if not name:
-            print("Validation failed: The name field must be populated.")
-            return False
+            return False, "Validation failed: The name field must be populated."
 
         # ID Generation
         last_id = self.dao.get_last_employee_id()
@@ -84,7 +88,11 @@ class Manager:
             new_id = last_id + 1
         else:
             new_id = 6001  # Starting ID for employees if database is empty
-        return self.dao.add_employee(new_id, name, qualification, contract_type)
+        success = self.dao.add_employee(new_id, name, qualification, contract_type)
+        if success:
+            return True, "Employee added successfully."
+        else:
+            return False, "Error adding employee. Please try again."
 
 
     def add_shift(self, shift_name, shift_start, shift_end, shift_duration):
@@ -92,8 +100,7 @@ class Manager:
         Validates input, generates an ID, and calls DAO to save shift.
         """
         if not shift_name or not shift_start or not shift_end:
-            print("Validation failed: All shift fields must be populated.")
-            return False
+            return False, "Validation failed: All shift fields must be populated."
 
         # ID Generation
         last_id = self.dao.get_last_shift_id()
@@ -101,7 +108,11 @@ class Manager:
             new_id = last_id + 1
         else:
             new_id = 101  # Starting ID for shifts if database is empty
-        return self.dao.add_shift(new_id, shift_name, shift_start, shift_end, shift_duration)
+        success = self.dao.add_shift(new_id, shift_name, shift_start, shift_end, shift_duration)
+        if success:
+            return True, "Shift added successfully."
+        else:
+            return False, "Error adding shift. Please try again."
 
 
     def get_all_employees(self):
