@@ -57,22 +57,41 @@ class Manager:
 
     def upload_bulk_employees(self, df):
         """Iterates through a dataframe to bulk add employees."""
-        success = True
-        for _, row in df.iterrows():
-            # Handles slightly different column name formats
-            name = row.get('name') or row.get('Name')
-            role = row.get('qualification') or row.get('Role') or row.get('role')
-            contract = row.get('contract_type') or row.get('Contract Type') or row.get('contract type')
+        failed_rows = []
+        
+        if not df.empty:
+            for index, row in df.iterrows():
+                name = row.get('name')
+                qualification = row.get('qualification')
+                contract_type = row.get('contract type')
             
-            if name and role and contract:
-                if not self.add_employee(name, role, contract):
-                    success = False
-        return success
+                # If any employee fails validation or insertion, we add its name to the failed_to_add list
+                success = self.add_employee(name, qualification, contract_type)[0]
+                if not success:
+                    failed_rows.append(str(index + 2))
+        else:
+            return False, "The uploaded file is empty. Please provide a valid file with employee data."
+        
+        message = "Bulk upload completed. Values may be missing so these rows failed: " + ", ".join(failed_rows) if failed_rows else "All employees added successfully."
+        return True, message
 
 
     def delete_admin(self, admin_id):
-        """Asks DAO to delete an admin using their ID. If DAO returns True, deletion was successful, otherwise it failed."""
-        return self.dao.delete_admin(admin_id)
+        if self.dao.delete_admin(admin_id):
+            return True, f"Admin with ID {admin_id} has been deleted."
+        return False, "Failed to delete admin. Please check the ID and try again."
+
+
+    def delete_employee(self, emp_id):
+        if self.dao.delete_employee(emp_id):
+            return True, f"Employee with ID {emp_id} has been deleted."
+        return False, "Failed to delete employee. Please check the ID and try again."
+
+
+    def delete_shift(self, shift_id):
+        if self.dao.delete_shift(shift_id):
+            return True, f"Shift with ID {shift_id} has been deleted."
+        return False, "Failed to delete shift. Please check the ID and try again."
 
 
     def add_employee(self, name, qualification, contract_type):
@@ -80,8 +99,12 @@ class Manager:
         Validates input, generates an ID, and calls DAO to save employee.
         """
         if not name:
-            return False, "Validation failed: The name field must be populated."
-
+            return False, "Validation failed: Name field is missing."
+        if not qualification:
+            return False, "Validation failed: Qualification field is missing."
+        if not contract_type:
+            return False, "Validation failed: Contract type field is missing."
+        
         # ID Generation
         last_id = self.dao.get_last_employee_id()
         if last_id is not None:
@@ -131,22 +154,24 @@ class Manager:
 
 
     def empty_employee_database(self):
-        """Pass-through to DAO"""
-        return self.dao.empty_employee_database()
+        if self.dao.empty_employee_database():
+            return True, "All employee data has been cleared."
+        return False, "Failed to clear employee data."
 
 
     def empty_shifts_database(self):
-        """Pass-through to DAO"""
-        return self.dao.empty_shifts_database()
+        if self.dao.empty_shifts_database():
+            return True, "All shifts have been cleared."
+        return False, "Failed to clear shift data."
 
 
     def update_employees(self, employees_df):
-        """Passes the dataframe to DAO for updates"""
-        return self.dao.update_employees(employees_df)
+        if self.dao.update_employees(employees_df):
+            return True, "Personnel changes saved successfully."
+        return False, "Failed to save personnel changes."
 
 
     def update_shifts(self, shifts_df):
-        """
-        Passes the dataframe to DAO for updates.
-        """
-        return self.dao.update_shifts(shifts_df)
+        if self.dao.update_shifts(shifts_df):
+            return True, "Shift definitions updated successfully."
+        return False, "Failed to update shift definitions."

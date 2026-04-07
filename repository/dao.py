@@ -74,6 +74,36 @@ class DatabaseAccess:
             return False
 
 
+    def delete_employee(self, emp_id):
+        """Deletes an employee from the database based on their ID."""
+        try:
+            with self.db.get_session() as session:
+                employee_to_delete = session.query(Employee).filter(Employee.id == emp_id).first()
+                if employee_to_delete:
+                    session.delete(employee_to_delete)
+                    return True
+                else:
+                    return False
+        except Exception as e:
+            print(f"Error deleting employee: {e}")
+            return False
+
+
+    def delete_shift(self, shift_id):
+        """Deletes a shift from the database based on its ID."""
+        try:
+            with self.db.get_session() as session:
+                shift_to_delete = session.query(Shifts).filter(Shifts.id == shift_id).first()
+                if shift_to_delete:
+                    session.delete(shift_to_delete)
+                    return True
+                else:
+                    return False
+        except Exception as e:
+            print(f"Error deleting shift: {e}")
+            return False
+
+
     def add_employee(self, emp_id, name, qualification, contract_type):
         """
         Creates a new employee object and saves it to the database.

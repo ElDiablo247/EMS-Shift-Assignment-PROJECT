@@ -25,7 +25,23 @@ class ShiftPage:
                 time.sleep(1.5)
                 st.rerun()
             else:
-                st.error(f"Failed to add shift: {message}")
+                st.error(message)
+
+
+    def delete_shift_section(self):
+        """Section for deleting shifts from the system."""
+        st.header("Delete Shift")
+        with st.form("delete_shift_form", clear_on_submit=True):
+            id_to_delete = st.number_input("Shift ID", value=None, placeholder="Enter the ID of the shift to delete.")
+            submitted = st.form_submit_button("Delete Shift")
+            if submitted:
+                success, message = self.manager.delete_shift(id_to_delete)
+                if success:
+                    st.success(message)
+                    time.sleep(1.5)
+                    st.rerun()
+                else:
+                    st.error(message)
 
 
     def display_shift_table(self):
@@ -33,10 +49,13 @@ class ShiftPage:
         st.header("Shift Requirements")
         
         if st.button("Clear All Shifts"):
-            if self.manager.empty_shifts_database():
-                st.success("All shifts cleared.")
+            success, message = self.manager.empty_shifts_database()
+            if success:
+                st.success(message)
                 time.sleep(1.5)
                 st.rerun()
+            else:
+                st.error(message)
         shifts = self.manager.get_all_shifts()
         if shifts.empty:
             st.info("No shifts defined. Use the sidebar to add them.")
@@ -57,10 +76,13 @@ class ShiftPage:
             disabled=["id"]
         )
         if st.button("Update Shift Definitions"):
-            if self.manager.update_shifts(edited_df):
-                st.success("Shifts updated.")
+            success, message = self.manager.update_shifts(edited_df)
+            if success:
+                st.success(message)
                 time.sleep(1.5)
                 st.rerun()
+            else:
+                st.error(message)
 
 
     def render_page(self):
@@ -78,6 +100,8 @@ class ShiftPage:
         col1, col2 = st.columns([3, 7], gap="xlarge")
         with col1:
             self.add_shift_section()
+            st.markdown("---")
+            self.delete_shift_section()
         with col2:
             self.display_shift_table()
 

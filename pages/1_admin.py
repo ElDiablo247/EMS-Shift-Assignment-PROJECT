@@ -43,10 +43,11 @@ class AdminPage:
                     else:
                         df = pd.read_excel(uploaded_file)
                         
-                    if self.manager.upload_bulk_employees(df):
-                        st.success("Employees uploaded successfully!")
+                    success, message = self.manager.upload_bulk_employees(df)
+                    if success:
+                        st.success(message)
                     else:
-                        st.warning("Upload finished, but some rows might have failed or been skipped.")
+                        st.error(message)
                 except Exception as e:
                     st.error(f"Error reading file: {e}")
 
@@ -82,12 +83,14 @@ class AdminPage:
                 if id_to_delete == 1:
                     st.error("Cannot delete the default super admin.")
                     return
-                if self.manager.delete_admin(id_to_delete):
-                    st.success(f"Admin with ID {id_to_delete} has been deleted.")
+                
+                success, message = self.manager.delete_admin(id_to_delete)
+                if success:
+                    st.success(message)
                     time.sleep(1.5)
                     st.rerun()
                 else:
-                    st.error("Failed to delete admin. Please check the ID and try again.")
+                    st.error(message)
 
 
     def render_page(self):

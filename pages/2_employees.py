@@ -24,7 +24,23 @@ class EmployeePage:
                 time.sleep(1.5)
                 st.rerun()
             else:
-                st.error(f"Failed to add employee: {message}")
+                st.error(message)
+
+
+    def delete_employee_section(self):
+        """Section for deleting employees from the system."""
+        st.header("Delete Employee")
+        with st.form("delete_employee_form", clear_on_submit=True):
+            id_to_delete = st.number_input("Employee ID", value=None, placeholder="Enter the ID of the employee to delete.")
+            submitted = st.form_submit_button("Delete Employee")
+            if submitted:
+                success, message = self.manager.delete_employee(id_to_delete)
+                if success:
+                    st.success(message)
+                    time.sleep(1.5)
+                    st.rerun()
+                else:
+                    st.error(message)
 
 
     def display_employee_table(self):
@@ -32,10 +48,13 @@ class EmployeePage:
         st.header("Personnel Management")
         
         if st.button("Wipe Employee Data", help="Danger: This will delete all employees."):
-            if self.manager.empty_employee_database():
-                st.success("All employee data has been cleared.")
+            success, message = self.manager.empty_employee_database()
+            if success:
+                st.success(message)
                 time.sleep(1.5)
                 st.rerun()
+            else:
+                st.error(message)
         personnel = self.manager.get_all_employees()
         if personnel.empty:
             st.info("No staff registered yet. Use the sidebar to add employees.")
@@ -56,10 +75,13 @@ class EmployeePage:
             disabled=["id"]
         )
         if st.button("Save Personnel Changes"):
-            if self.manager.update_employees(edited_df):
-                st.success("Changes saved.")
+            success, message = self.manager.update_employees(edited_df)
+            if success:
+                st.success(message)
                 time.sleep(1.5)
                 st.rerun()
+            else:
+                st.error(message)
 
 
     def render_page(self):
@@ -78,6 +100,8 @@ class EmployeePage:
         with col1:
             with st.container(border=True):
                 self.add_employee_section()
+            with st.container(border=True):
+                self.delete_employee_section()
         with col2:
             with st.container(border=True):
                 self.display_employee_table()
