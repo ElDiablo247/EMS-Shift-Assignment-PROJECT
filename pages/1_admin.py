@@ -1,7 +1,6 @@
 import streamlit as st
 from logic.auth_utils import ensure_authenticated
 from logic.manager import Manager
-import pandas as pd
 import time
 
 
@@ -16,10 +15,11 @@ class AdminPage:
         st.header("Admin Registration")
         username = st.text_input("Admin Username")
         password = st.text_input("Password", type="password")
+        confirm_password = st.text_input("Confirm Password", type="password")
         role = st.selectbox("Role", ["basic"])
         
         if st.button("Add to System"):
-            success, message = self.manager.register_basic_admin(username, password, role)
+            success, message = self.manager.register_basic_admin(username, password, confirm_password, role)
             if success:
                 st.success(message)
                 time.sleep(1.5)
@@ -36,20 +36,11 @@ class AdminPage:
         
         if uploaded_file is not None:
             if st.button("Upload Data", use_container_width=True):
-                try:
-                    # Check the file extension to determine the correct pandas reading method
-                    if uploaded_file.name.endswith('.csv'):
-                        df = pd.read_csv(uploaded_file)
-                    else:
-                        df = pd.read_excel(uploaded_file)
-                        
-                    success, message = self.manager.upload_bulk_employees(df)
-                    if success:
-                        st.success(message)
-                    else:
-                        st.error(message)
-                except Exception as e:
-                    st.error(f"Error reading file: {e}")
+                success, message = self.manager.upload_bulk_employees(uploaded_file)
+                if success:
+                    st.success(message)
+                else:
+                    st.error(message)
 
 
     def display_admins_table(self):
