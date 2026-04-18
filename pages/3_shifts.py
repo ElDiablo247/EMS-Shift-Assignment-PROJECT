@@ -12,7 +12,7 @@ class ShiftPage:
 
     def add_shift_section(self):
         """Section for adding new shifts to the system."""
-        st.header("Add New Shift")
+        st.header("Shift Registration")
         name = st.text_input("Shift Name")
         start = st.time_input("Start Time", value=None)
         end = st.time_input("End Time", value=None)
@@ -46,7 +46,7 @@ class ShiftPage:
 
     def display_shift_table(self):
         """Displays the shift data in an editable table format."""
-        st.header("Shift Requirements")
+        st.header("Shift Management")
         
         if st.button("Clear All Shifts"):
             success, message = self.manager.empty_shifts_database()
@@ -75,7 +75,7 @@ class ShiftPage:
             hide_index=True,
             disabled=["id"]
         )
-        if st.button("Update Shift Definitions"):
+        if st.button("Save Changes"):
             success, message = self.manager.update_shifts(edited_df)
             if success:
                 st.success(message)

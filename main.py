@@ -53,10 +53,10 @@ class Homepage:
             pages = []
             # Super admin gets the Control Panel added first
             if st.session_state.get("role") == "super":
-                pages.append(st.Page("pages/1_admin.py", title="Admin Control"))
+                pages.append(st.Page("pages/1_admin.py", title="Admin Control Panel"))
             
             # Both roles get these pages
-            pages.append(st.Page("pages/2_employees.py", title="Personnel Management"))
+            pages.append(st.Page("pages/2_employees.py", title="Staff Management"))
             pages.append(st.Page("pages/3_shifts.py", title="Shift Management"))
             pg = st.navigation(pages)
             pg.run()

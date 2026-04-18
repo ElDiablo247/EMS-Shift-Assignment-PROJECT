@@ -15,7 +15,7 @@ class EmployeePage:
         st.header("Employee Registration")
         name = st.text_input("Employee Name")
         qualification = st.selectbox("Role", ["Paramedic", "Assistant"])
-        contract_type = st.selectbox("Contract Type", ["Full-Time", "Part-Time"])
+        contract_type = st.selectbox("Contract Type", ["Full-Time", "Part-Time", "Flexible"])
         
         if st.button("Add to System"):
             success, message = self.manager.add_employee(name, qualification, contract_type)
@@ -45,7 +45,7 @@ class EmployeePage:
 
     def display_employee_table(self):
         """Displays the employee data in an editable table format."""
-        st.header("Personnel Management")
+        st.header("Staff Management")
         
         if st.button("Wipe Employee Data", help="Danger: This will delete all employees."):
             success, message = self.manager.empty_employee_database()
@@ -63,7 +63,7 @@ class EmployeePage:
             "id": st.column_config.NumberColumn("ID"),
             "name": st.column_config.TextColumn("Name"),
             "qualification": st.column_config.SelectboxColumn("Role", options=["Paramedic", "Assistant"], required=True),
-            "contract_type": st.column_config.SelectboxColumn("Contract Type", options=["Full-Time", "Part-Time"], required=True)
+            "contract_type": st.column_config.SelectboxColumn("Contract Type", options=["Full-Time", "Part-Time", "Flexible"], required=True)
         }
         
         edited_df = st.data_editor(
@@ -74,7 +74,7 @@ class EmployeePage:
             hide_index=True,
             disabled=["id"]
         )
-        if st.button("Save Personnel Changes"):
+        if st.button("Save Changes"):
             success, message = self.manager.update_employees(edited_df)
             if success:
                 st.success(message)
