@@ -35,6 +35,10 @@ class ShiftPage:
             id_to_delete = st.number_input("Shift ID", value=None, placeholder="Enter the ID of the shift to delete.")
             submitted = st.form_submit_button("Delete Shift")
             if submitted:
+                if st.session_state.get('role') == 'basic':
+                    st.error('Only "super" admins are allowed to delete.')
+                    return
+                
                 success, message = self.manager.delete_shift(id_to_delete)
                 if success:
                     st.success(message)
@@ -65,7 +69,8 @@ class ShiftPage:
             "shift_name": st.column_config.TextColumn("Shift Name"),
             "shift_start": st.column_config.TimeColumn("Start Time", format="HH:mm"),
             "shift_end": st.column_config.TimeColumn("End Time", format="HH:mm"),
-            "shift_duration": st.column_config.NumberColumn("Duration minus breaks(hrs)")
+            "shift_duration": st.column_config.NumberColumn("Duration minus breaks(hrs)"),
+            "is_active": st.column_config.CheckboxColumn("Active", required=True)
         }
         
         edited_df = st.data_editor(

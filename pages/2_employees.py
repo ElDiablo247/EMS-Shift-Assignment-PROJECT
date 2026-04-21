@@ -13,7 +13,7 @@ class EmployeePage:
     def add_employee_section(self):
         """Section for adding new employees to the system."""
         st.header("Employee Registration")
-        name = st.text_input("Employee Name")
+        name = st.text_input("Name")
         qualification = st.selectbox("Role", ["Paramedic", "Assistant"])
         contract_type = st.selectbox("Contract Type", ["Full-Time", "Part-Time", "Flexible"])
         
@@ -28,12 +28,16 @@ class EmployeePage:
 
 
     def delete_employee_section(self):
-        """Section for deleting employees from the system."""
+        """Section for deleting employees from the Database. This will only be used during development and will not be made available to users."""
         st.header("Delete Employee")
         with st.form("delete_employee_form", clear_on_submit=True):
             id_to_delete = st.number_input("Employee ID", value=None, placeholder="Enter the ID of the employee to delete.")
             submitted = st.form_submit_button("Delete Employee")
             if submitted:
+                if st.session_state.get('role') == 'basic':
+                    st.error('Only "super" admins are allowed to delete.')
+                    return
+                
                 success, message = self.manager.delete_employee(id_to_delete)
                 if success:
                     st.success(message)
@@ -63,7 +67,8 @@ class EmployeePage:
             "id": st.column_config.NumberColumn("ID"),
             "name": st.column_config.TextColumn("Name"),
             "qualification": st.column_config.SelectboxColumn("Role", options=["Paramedic", "Assistant"], required=True),
-            "contract_type": st.column_config.SelectboxColumn("Contract Type", options=["Full-Time", "Part-Time", "Flexible"], required=True)
+            "contract_type": st.column_config.SelectboxColumn("Contract Type", options=["Full-Time", "Part-Time", "Flexible"], required=True),
+            "is_active": st.column_config.CheckboxColumn("Active", required=True)
         }
         
         edited_df = st.data_editor(

@@ -58,6 +58,7 @@ class Homepage:
             # Both roles get these pages
             pages.append(st.Page("pages/2_employees.py", title="Staff Management"))
             pages.append(st.Page("pages/3_shifts.py", title="Shift Management"))
+            pages.append(st.Page("pages/4_assignments.py", title="Shift Generation Panel"))
             pg = st.navigation(pages)
             pg.run()
         else:

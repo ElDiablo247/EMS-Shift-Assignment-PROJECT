@@ -1,5 +1,5 @@
 from repository.db_engine import db_obj
-from repository.models import Employee, Shifts, Admin
+from repository.models import Employee, Shift, Admin
 import pandas as pd
 
 class DatabaseAccess:
@@ -93,7 +93,7 @@ class DatabaseAccess:
         """Deletes a shift from the database based on its ID."""
         try:
             with self.db.get_session() as session:
-                shift_to_delete = session.query(Shifts).filter(Shifts.id == shift_id).first()
+                shift_to_delete = session.query(Shift).filter(Shift.id == shift_id).first()
                 if shift_to_delete:
                     session.delete(shift_to_delete)
                     return True
@@ -131,7 +131,7 @@ class DatabaseAccess:
         # A new shift object is created with the provided details and the generated ID.
         try:
             with self.db.get_session() as session:
-                new_shift = Shifts(
+                new_shift = Shift(
                     id=shift_id,
                     shift_name=shift_name,
                     shift_start=shift_start,
@@ -160,7 +160,7 @@ class DatabaseAccess:
         Retrieves all shifts from the database and formats them for display.
         """
         with self.db.get_session() as session:
-            query = session.query(Shifts).order_by(Shifts.shift_name)
+            query = session.query(Shift).order_by(Shift.shift_name)
             return pd.read_sql(query.statement, session.bind)
 
 
@@ -186,7 +186,7 @@ class DatabaseAccess:
         """Wipes all data from the shifts table."""
         try:
             with self.db.get_session() as session:
-                session.query(Shifts).delete()
+                session.query(Shift).delete()
             return True
         except Exception as e:
             print(f"Error clearing Shifts database: {e}")
@@ -215,7 +215,7 @@ class DatabaseAccess:
         """
         try:
             with self.db.get_session() as session:
-                max_id = session.query(Shifts).order_by(Shifts.id.desc()).first()
+                max_id = session.query(Shift).order_by(Shift.id.desc()).first()
                 if max_id:
                     return max_id.id
                 else:   
@@ -238,6 +238,7 @@ class DatabaseAccess:
                             employee.name = row['name']
                             employee.qualification = row['qualification']
                             employee.contract_type = row['contract_type']
+                            employee.is_active = row['is_active']
             return True
         except Exception as e:
             print(f"Error updating data: {e}")
@@ -252,12 +253,13 @@ class DatabaseAccess:
             with self.db.get_session() as session:
                 for _, row in shifts_df.iterrows():
                     if pd.notna(row['id']):
-                        shift = session.query(Shifts).filter(Shifts.id == row['id']).first()
+                        shift = session.query(Shift).filter(Shift.id == row['id']).first()
                         if shift:
                             shift.shift_name = row['shift_name']
                             shift.shift_start = row['shift_start']
                             shift.shift_end = row['shift_end']
                             shift.shift_duration = row['shift_duration']
+                            shift.is_active = row['is_active']
             return True
         except Exception as e:
             print(f"Error updating data: {e}")
