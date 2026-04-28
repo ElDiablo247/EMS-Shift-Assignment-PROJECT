@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Time, Date, ForeignKey, Boolean
+from sqlalchemy import Column, Integer, String, Float, Time, Date, ForeignKey, Boolean, JSON
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
@@ -43,8 +43,18 @@ class Assignment(Base):
     id = Column(Integer, primary_key=True)
     date = Column(Date, nullable=False)
     shift_id = Column(Integer, ForeignKey('shifts.id'), nullable=False)
-    employee_id = Column(Integer, ForeignKey('employees.id'), nullable=False)
+    employee_id = Column(Integer, ForeignKey('employees.id'), nullable=True)
 
     # Hidden attributes that all assignment objects have
     employee = relationship('Employee', back_populates='assignments') 
     shift = relationship('Shift', back_populates='assignments')
+
+
+class Constraint(Base):
+    __tablename__ = 'constraints'
+    
+    id = Column(Integer, primary_key=True)
+    category = Column(String, nullable=False)
+    constraint_key = Column(String, nullable=False)    
+    constraint_value = Column(JSON, nullable=True)
+    description = Column(String, nullable=False)

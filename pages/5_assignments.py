@@ -1,12 +1,10 @@
 import streamlit as st
-from repository.dao import DatabaseAccess
 from logic.auth_utils import ensure_authenticated
 
 
 class AssignmentPage:
     def __init__(self):
         ensure_authenticated()
-        self.dao = DatabaseAccess()
 
 
     def generate_plan_section(self):
@@ -47,6 +45,7 @@ class AssignmentPage:
         with col2:
             with st.container(border=True):
                 self.display_assignments_section()
+
 
 if __name__ == "__main__":
     page = AssignmentPage()

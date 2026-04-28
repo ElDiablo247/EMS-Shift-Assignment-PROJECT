@@ -1,10 +1,13 @@
-from repository.dao import DatabaseAccess
+import pandas as pd
+import calendar
+import holidays
+import datetime
 
 
 class PlanGenerator:
     def __init__(self):
-        self.dao = DatabaseAccess()
+        pass
 
 
-        def assign_shifts_to_dates(self):
-            pass
+        def generate_empty_template(self, month, year, shifts_df):
+            

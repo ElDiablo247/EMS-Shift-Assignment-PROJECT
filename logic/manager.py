@@ -2,6 +2,7 @@ from repository.dao import DatabaseAccess
 import bcrypt
 import re
 import pandas as pd
+from datetime import datetime
 
 class Manager:
     def __init__(self):
@@ -117,6 +118,24 @@ class Manager:
         return True, message
 
 
+    def upload_bulk_shifts(self):
+        """
+        Populates the shifts table with a predefined set of shifts. This is a one-click solution to quickly set up the system with commonly used shifts.
+        """
+        shifts = [
+            {"name": "K1", "start": "06:30", "end": "15:00", "duration": 8},
+            {"name": "K2", "start": "06:30", "end": "15:00", "duration": 8},
+            {"name": "K4", "start": "15:00", "end": "23:30", "duration": 8},
+            {"name": "K5", "start": "15:00", "end": "23:30", "duration": 8},
+            {"name": "K3", "start": "07:30", "end": "16:00", "duration": 8},
+            {"name": "K6", "start": "21:00", "end": "05:30", "duration": 8}
+        ]
+        for shift in shifts: 
+            start_time = datetime.strptime(shift["start"], "%H:%M").time()
+            end_time = datetime.strptime(shift["end"], "%H:%M").time()
+            self.add_shift(shift["name"], start_time, end_time, shift["duration"])
+
+
     def delete_admin(self, admin_id):
         if self.dao.delete_admin(admin_id):
             return True, f"Admin with ID {admin_id} has been deleted."
@@ -216,3 +235,118 @@ class Manager:
         if self.dao.update_shifts(shifts_df):
             return True, "Shift definitions updated successfully."
         return False, "Failed to update shift definitions."
+    
+
+    def populate_constraints(self):
+        """
+        This function is executed the very first moment when the super admin is registered.
+        The purpose of the function is to insert the available constraints to the Database so the user can later modify their values.
+        """
+        monday_shifts = {
+            "category": "shifts_for_day",
+            "constraint_key": "Monday",
+            "constraint_value": [],
+            "description": "Choose which shifts should run on a regular Monday"
+        }
+        tuesday_shifts = {
+            "category": "shifts_for_day",
+            "constraint_key": "Tuesday",
+            "constraint_value": [],
+            "description": "Choose which shifts should run on a regular Tuesday"
+        }
+        wednesday_shifts = {
+            "category": "shifts_for_day",
+            "constraint_key": "Wednesday",
+            "constraint_value": [],
+            "description": "Choose which shifts should run on a regular Wednesday"
+        }
+        thursday_shifts = {
+            "category": "shifts_per_day",
+            "constraint_key": "Thursday",
+            "constraint_value": [],
+            "description": "Choose which shifts should run on a regular Thursday"
+        }
+        friday_shifts = {
+            "category": "shifts_per_day",
+            "constraint_key": "Friday",
+            "constraint_value": [],
+            "description": "Choose which shifts should run on a regular Friday"
+        }
+        saturday_shifts = {
+            "category": "shifts_per_day",
+            "constraint_key": "Saturday",
+            "constraint_value": [],
+            "description": "Choose which shifts should run on a regular Saturday"
+        }
+        sunday_shifts = {
+            "category": "shifts_per_day",
+            "constraint_key": "Sunday",
+            "constraint_value": [],
+            "description": "Choose which shifts should run on a regular Sunday"
+        }
+        holiday_shifts = {
+            "category": "shifts_per_day",
+            "constraint_key": "Holiday",
+            "constraint_value": [],
+            "description": "Choose which shifts should run on days that are considered public holidays"
+        }
+        fulltime_hours = {
+            "category": "contract_hours",
+            "constraint_key": "Full-time",
+            "constraint_value": None,
+            "description": "Choose how many hours a Full-time employee should work"
+        }
+
+        constraints_list = [
+            monday_shifts,
+            tuesday_shifts,
+            wednesday_shifts,
+            thursday_shifts,
+            friday_shifts,
+            saturday_shifts,
+            sunday_shifts,
+            holiday_shifts,
+            fulltime_hours,
+        ]
+
+        if self.dao.populate_constraints(constraints_list):
+            return True, "Constraints were successfully inserted in the Database!"
+        return False, "Insertion of constraints in the database failed. Check the constraints and try again"
+
+
+    def return_shift_names(self):
+        """Fetches all shifts and filters out just the active shift names as a list."""
+        shifts_df = self.get_all_shifts()
+        if shifts_df.empty:
+            return []
+        
+        # Filter for active shifts and return their names
+        active_shifts = shifts_df[shifts_df['is_active'] == True]
+        return active_shifts['shift_name'].tolist()
+
+
+    def get_all_constraints(self):
+        """Pass-through to fetch constraints DataFrame."""
+        return self.dao.get_all_constraints()
+
+
+    def update_constraints(self, constraints_df):
+        """Calls DAO to update constraints."""
+        if self.dao.update_constraints(constraints_df):
+            return True, "Constraints updated successfully."
+        return False, "Failed to update constraints."
+
+
+    def get_shifts_per_day_constraints(self):
+        """Fetches and filters constraints specifically for the shifts per day section."""
+        df = self.get_all_constraints()
+        if df.empty:
+            return df
+        return df[df['category'].isin(['shifts_for_day', 'shifts_per_day'])].copy()
+
+
+    def update_fulltime_hours(self, hours):
+        """Updates the full-time hours baseline directly using a dedicated DAO method."""
+        if self.dao.update_single_constraint('contract_hours', 'Full-time', hours):
+            return True, "Full-time baseline hours set successfully."
+        return False, "Failed to set full-time baseline hours."

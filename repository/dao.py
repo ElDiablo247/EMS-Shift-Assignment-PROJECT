@@ -1,5 +1,5 @@
 from repository.db_engine import db_obj
-from repository.models import Employee, Shift, Admin
+from repository.models import Employee, Shift, Admin, Constraint
 import pandas as pd
 
 class DatabaseAccess:
@@ -263,4 +263,62 @@ class DatabaseAccess:
             return True
         except Exception as e:
             print(f"Error updating data: {e}")
+            return False
+        
+
+    def populate_constraints(self, constraints_list):
+        """
+        Takes a list of dictionaries and bulk inserts them into the constraints table.
+        This should typically only be run once during initial setup.
+        """
+        try:
+            with self.db.get_session() as session:
+                # bulk_insert_mappings is incredibly fast and takes your list of dicts directly!
+                session.bulk_insert_mappings(Constraint, constraints_list)
+            return True
+        except Exception as e:
+            print(f"Error seeding constraints: {e}")
+            return False
+
+
+    def get_all_constraints(self):
+        """Retrieves all constraints from the database as a DataFrame."""
+        with self.db.get_session() as session:
+            query = session.query(Constraint).order_by(Constraint.id)
+            return pd.read_sql(query.statement, session.bind)
+
+
+    def update_constraints(self, constraints_df):
+        """
+        Updates constraint records based on the edited DataFrame from the UI.
+        """
+        try:
+            with self.db.get_session() as session:
+                for _, row in constraints_df.iterrows():
+                    if pd.notna(row['id']):
+                        constraint = session.query(Constraint).filter(Constraint.id == row['id']).first()
+                        if constraint:
+                            constraint.constraint_value = row['constraint_value']
+            return True
+        except Exception as e:
+            print(f"Error updating constraints: {e}")
+            return False
+
+
+    def update_single_constraint(self, category, key, new_value):
+        """
+        Updates a single constraint record directly based on category and key, without using Pandas DataFrames.
+        """
+        try:
+            with self.db.get_session() as session:
+                constraint = session.query(Constraint).filter(
+                    Constraint.category == category, 
+                    Constraint.constraint_key == key
+                ).first()
+                if constraint:
+                    constraint.constraint_value = new_value
+                    return True
+                return False
+        except Exception as e:
+            print(f"Error updating single constraint: {e}")
             return False

@@ -42,6 +42,13 @@ class Homepage:
                     st.success(message)
                     st.info("Registration successful. Please log in with your new credentials.")
                     time.sleep(1.5)
+
+                    success2, message2 = self.manager.populate_constraints()
+                    if success2:
+                        st.success(message2)
+                        time.sleep(1.5)
+                    else:
+                        st.error(message2)
                     st.rerun()
                 else:
                     st.error(message)
@@ -58,7 +65,8 @@ class Homepage:
             # Both roles get these pages
             pages.append(st.Page("pages/2_employees.py", title="Staff Management"))
             pages.append(st.Page("pages/3_shifts.py", title="Shift Management"))
-            pages.append(st.Page("pages/4_assignments.py", title="Shift Generation Panel"))
+            pages.append(st.Page("pages/4_constraints.py", title="Constraints Management"))
+            pages.append(st.Page("pages/5_assignments.py", title="Shift Generation Panel"))
             pg = st.navigation(pages)
             pg.run()
         else:

@@ -15,7 +15,7 @@ class EmployeePage:
         st.header("Employee Registration")
         name = st.text_input("Name")
         qualification = st.selectbox("Role", ["Paramedic", "Assistant"])
-        contract_type = st.selectbox("Contract Type", ["Full-Time", "Part-Time", "Flexible"])
+        contract_type = st.selectbox("Contract Type", ["100%", "75%", "50%", "Flexible"])
         
         if st.button("Add to System"):
             success, message = self.manager.add_employee(name, qualification, contract_type)
@@ -67,7 +67,7 @@ class EmployeePage:
             "id": st.column_config.NumberColumn("ID"),
             "name": st.column_config.TextColumn("Name"),
             "qualification": st.column_config.SelectboxColumn("Role", options=["Paramedic", "Assistant"], required=True),
-            "contract_type": st.column_config.SelectboxColumn("Contract Type", options=["Full-Time", "Part-Time", "Flexible"], required=True),
+            "contract_type": st.column_config.SelectboxColumn("Contract Type", options=["100%", "75%", "50%", "Flexible"], required=True),
             "is_active": st.column_config.CheckboxColumn("Active", required=True)
         }
         

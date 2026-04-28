@@ -2,6 +2,7 @@ import streamlit as st
 from logic.auth_utils import ensure_authenticated
 from logic.manager import Manager
 import time
+import pandas as pd
 
 
 class AdminPage:
@@ -41,6 +42,13 @@ class AdminPage:
                     st.success(message)
                 else:
                     st.error(message)
+
+
+    def bulk_upload_shifts_section(self):
+        """Button for uploading predefined shifts."""
+        st.header("Shift Upload")
+        if st.button("Upload Shifts"):
+            self.manager.upload_bulk_shifts()
 
 
     def display_admins_table(self):
@@ -95,22 +103,22 @@ class AdminPage:
                 del st.session_state[key]
             st.rerun()
 
-        # 2x2 Grid Layout Construction
-        top_left, top_right = st.columns(2, gap="large")
-        with top_left:
+        # 2-Column Vertical Layout Construction
+        col_left, col_right = st.columns(2, gap="large")
+        
+        with col_left:
             with st.container(border=True):
                 self.register_admin_section()
-        with top_right:
-            with st.container(border=True):
-                self.bulk_upload_section()
-                
-        bottom_left, bottom_right = st.columns(2, gap="large")
-        with bottom_left:
-            with st.container(border=True):
-                self.display_admins_table()
-        with bottom_right:
             with st.container(border=True):
                 self.delete_admin_section()
+                
+        with col_right:
+            with st.container(border=True):
+                self.bulk_upload_section()
+            with st.container(border=True):
+                self.bulk_upload_shifts_section()
+            with st.container(border=True):
+                self.display_admins_table()
 
 
 if __name__ == "__main__":
