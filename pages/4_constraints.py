@@ -11,10 +11,33 @@ class ConstraintsPage:
         self.manager = Manager()
 
 
+    def overview_section(self):
+        """Displays a read-only overview of all system constraints."""
+        st.header("Configuration Overview")
+        st.info("Current active rules for the system.")
+        df = self.manager.get_all_constraints()
+        
+        if not df.empty:
+            # Convert the constraint_value column to strings
+            df['constraint_value'] = df['constraint_value'].astype(str)
+            st.dataframe(
+                df,
+                column_config={
+                    "id": st.column_config.NumberColumn("ID", width="small"),
+                    "category": st.column_config.TextColumn("Category"),
+                    "constraint_key": st.column_config.TextColumn("Key"),
+                    "constraint_value": st.column_config.TextColumn("Value", width="medium"),
+                    "description": None
+                },
+                hide_index=True,
+                use_container_width=False
+            )
+
+
     def shifts_per_day_section(self):
         """Section for assigning which shifts are available on which days using a multiselect table."""
         st.header("Shifts Per Day Configuration")
-        st.info("Select the shifts that should run on each specific day.")
+        st.info("Select the shifts that should run on each day category.")
         
         # 1. Fetch the shifts per day constraints from the database and the shift names, with the help of the manager.
         shifts_df = self.manager.get_shifts_per_day_constraints()
@@ -33,24 +56,25 @@ class ConstraintsPage:
             )
         }
         
-        # 3. Display the data
-        edited_df = st.data_editor(
-            shifts_df,
-            column_config=column_config,
-            hide_index=True,
-            use_container_width=True,
-            key="shifts_per_day_editor"
-        )
-        
-        # 4. Save Changes
-        if st.button("Save Shift Constraints"):
-            success, message = self.manager.update_constraints(edited_df)
-            if success:
-                st.success(message)
-                time.sleep(1.5)
-                st.rerun()
-            else:
-                st.error(message)
+        # Wrap the editor and button in a form 
+        with st.form("shifts_per_day_form"):
+            edited_df = st.data_editor(
+                shifts_df,
+                column_config=column_config,
+                hide_index=True,
+                use_container_width=True,
+                key="shifts_per_day_editor"
+            )
+            
+            # 4. Save Changes
+            if st.form_submit_button("Save Constraints"):
+                success, message = self.manager.update_multiple_constraints(edited_df)
+                if success:
+                    st.success(message)
+                    time.sleep(1.5)
+                    st.rerun()
+                else:
+                    st.error(message)
 
 
     def contract_constraints_section(self):
@@ -63,15 +87,33 @@ class ConstraintsPage:
             options=[37.5, 40.0, 42.5]
         )
         if st.button("Save Contract Hours"):
-            success, message = self.manager.update_fulltime_hours(selected_hours)
+            success, message = self.manager.update_single_constraint("Contract hours", "Full-time", selected_hours)
             if success:
                 st.success(message)
+                time.sleep(1.5)
+                st.rerun()
+            else:
+                st.error(message)
+
+
+    def holidays_constraint_section(self):
+        """Section for managing the permanent holiday region."""
+        st.header("Holiday Management")
+        st.info("Select the German state the company operates in.")
+
+        state_code = st.selectbox("State Code", options=["BE", "BW", "BY", "HB", "HE", "HH", "MV", "NI", "NW", "RP", "SL", "SN", "ST", "SH", "TH"])
+        if st.button("Save Region"):
+            success, message = self.manager.update_single_constraint("Holidays", "Region", state_code)
+            if success:
+                st.success(message)
+                time.sleep(1.5)
+                st.rerun()
             else:
                 st.error(message)
 
 
     def render_page(self):
-        """Renders the constraints management page layout."""
+        """Renders the constraints page layout."""
         st.sidebar.title(f"Welcome, {st.session_state.get('username', 'User')}!")
         
         st.sidebar.markdown("---")
@@ -82,13 +124,17 @@ class ConstraintsPage:
                 del st.session_state[key]
             st.rerun()
 
-        col1, col2 = st.columns([2, 1], gap="large")
-        with col1:
-            with st.container(border=True):
+        with st.container(border=True):
+            self.overview_section()
+
+        with st.container(border=True):
+            tab1, tab2, tab3 = st.tabs(["Shifts per Day Rules", "Full-time Contract Rules", "Holiday Rules"])
+            with tab1:
                 self.shifts_per_day_section()
-        with col2:
-            with st.container(border=True):
+            with tab2:
                 self.contract_constraints_section()
+            with tab3:
+                self.holidays_constraint_section()
 
 
 if __name__ == "__main__":

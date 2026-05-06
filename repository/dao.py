@@ -288,7 +288,7 @@ class DatabaseAccess:
             return pd.read_sql(query.statement, session.bind)
 
 
-    def update_constraints(self, constraints_df):
+    def update_multiple_constraints(self, constraints_df):
         """
         Updates constraint records based on the edited DataFrame from the UI.
         """
@@ -317,8 +317,36 @@ class DatabaseAccess:
                 ).first()
                 if constraint:
                     constraint.constraint_value = new_value
-                    return True
-                return False
+            return True
         except Exception as e:
             print(f"Error updating single constraint: {e}")
+            return False
+
+
+    def dev_add_constraint(self, category, key, value, description):
+        """Directly inserts a single constraint (Developer tool)."""
+        try:
+            with self.db.get_session() as session:
+                new_constraint = Constraint(
+                    category=category,
+                    constraint_key=key,
+                    constraint_value=value,
+                    description=description
+                )
+                session.add(new_constraint)
+            return True
+        except Exception as e:
+            print(f"Error dev inserting constraint: {e}")
+            return False
+        
+
+    def dev_delete_constraint(self, constraint_id):
+        """Developer tool to delete constraints by ID."""
+        try:
+            with self.db.get_session() as session:
+                constraint_to_delete = session.query(Constraint).filter(Constraint.id == constraint_id).first()
+                session.delete(constraint_to_delete)
+            return True
+        except Exception as e:
+            print(f"Error deleting constraint: {e}")
             return False

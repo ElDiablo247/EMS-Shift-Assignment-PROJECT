@@ -29,27 +29,6 @@ class AdminPage:
                 st.error(message)
 
 
-    def bulk_upload_section(self):
-        """Section for bulk uploading employees via Excel or CSV."""
-        st.header("Bulk Employee Upload")
-        st.info("Upload an Excel or CSV file with columns: Name, Role, Contract Type")
-        uploaded_file = st.file_uploader("Choose a file", type=["xlsx", "xls", "csv"])
-        
-        if uploaded_file is not None:
-            if st.button("Upload Data", use_container_width=True):
-                success, message = self.manager.upload_bulk_employees(uploaded_file)
-                if success:
-                    st.success(message)
-                else:
-                    st.error(message)
-
-
-    def bulk_upload_shifts_section(self):
-        """Button for uploading predefined shifts."""
-        st.header("Shift Upload")
-        if st.button("Upload Shifts"):
-            self.manager.upload_bulk_shifts()
-
 
     def display_admins_table(self):
         """Displays the admins with a custom layout and delete buttons."""
@@ -113,10 +92,6 @@ class AdminPage:
                 self.delete_admin_section()
                 
         with col_right:
-            with st.container(border=True):
-                self.bulk_upload_section()
-            with st.container(border=True):
-                self.bulk_upload_shifts_section()
             with st.container(border=True):
                 self.display_admins_table()
 

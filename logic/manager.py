@@ -242,71 +242,65 @@ class Manager:
         This function is executed the very first moment when the super admin is registered.
         The purpose of the function is to insert the available constraints to the Database so the user can later modify their values.
         """
-        monday_shifts = {
-            "category": "shifts_for_day",
-            "constraint_key": "Monday",
+        weekday_shifts = {
+            "category": "Shifts per day",
+            "constraint_key": "Weekdays",
             "constraint_value": [],
-            "description": "Choose which shifts should run on a regular Monday"
-        }
-        tuesday_shifts = {
-            "category": "shifts_for_day",
-            "constraint_key": "Tuesday",
-            "constraint_value": [],
-            "description": "Choose which shifts should run on a regular Tuesday"
-        }
-        wednesday_shifts = {
-            "category": "shifts_for_day",
-            "constraint_key": "Wednesday",
-            "constraint_value": [],
-            "description": "Choose which shifts should run on a regular Wednesday"
-        }
-        thursday_shifts = {
-            "category": "shifts_per_day",
-            "constraint_key": "Thursday",
-            "constraint_value": [],
-            "description": "Choose which shifts should run on a regular Thursday"
-        }
-        friday_shifts = {
-            "category": "shifts_per_day",
-            "constraint_key": "Friday",
-            "constraint_value": [],
-            "description": "Choose which shifts should run on a regular Friday"
+            "description": "These shifts should run on a regular weekday (Monday to Friday)"
         }
         saturday_shifts = {
-            "category": "shifts_per_day",
+            "category": "Shifts per day",
             "constraint_key": "Saturday",
             "constraint_value": [],
-            "description": "Choose which shifts should run on a regular Saturday"
+            "description": "These shifts should run on a regular Saturday"
         }
         sunday_shifts = {
-            "category": "shifts_per_day",
+            "category": "Shifts per day",
             "constraint_key": "Sunday",
             "constraint_value": [],
-            "description": "Choose which shifts should run on a regular Sunday"
+            "description": "These shifts should run on a regular Sunday"
         }
         holiday_shifts = {
-            "category": "shifts_per_day",
+            "category": "Shifts per day",
             "constraint_key": "Holiday",
             "constraint_value": [],
-            "description": "Choose which shifts should run on days that are considered public holidays"
+            "description": "These shifts should run on public holidays for the given German state."
         }
         fulltime_hours = {
-            "category": "contract_hours",
+            "category": "Contract hours",
             "constraint_key": "Full-time",
             "constraint_value": None,
-            "description": "Choose how many hours a Full-time employee should work"
+            "description": "How many hours a Full-time employee should work per week"
+        }
+        holiday_region = {
+            "category": "Holidays",
+            "constraint_key": "Region",
+            "constraint_value": None,
+            "description": "German State for public holidays (initials)"
+        }
+        break_between_shifts = {
+            "category": "Work hours",
+            "constraint_key": "Between Shifts",
+            "constraint_value": 11,
+            "description": "This is the minimum rest period (in hours) between shifts"
+        }
+        weekly_max_hours = {
+            "category": "Work hours",
+            "constraint_key": "Weekly Max",
+            "constraint_value": 48,
+            "description": "This is the maximum hours an employee can work per week"
         }
 
+
         constraints_list = [
-            monday_shifts,
-            tuesday_shifts,
-            wednesday_shifts,
-            thursday_shifts,
-            friday_shifts,
+            weekday_shifts,
             saturday_shifts,
             sunday_shifts,
             holiday_shifts,
             fulltime_hours,
+            holiday_region,
+            break_between_shifts,
+            weekly_max_hours,
         ]
 
         if self.dao.populate_constraints(constraints_list):
@@ -320,7 +314,6 @@ class Manager:
         if shifts_df.empty:
             return []
         
-        # Filter for active shifts and return their names
         active_shifts = shifts_df[shifts_df['is_active'] == True]
         return active_shifts['shift_name'].tolist()
 
@@ -330,9 +323,9 @@ class Manager:
         return self.dao.get_all_constraints()
 
 
-    def update_constraints(self, constraints_df):
+    def update_multiple_constraints(self, constraints_df):
         """Calls DAO to update constraints."""
-        if self.dao.update_constraints(constraints_df):
+        if self.dao.update_multiple_constraints(constraints_df):
             return True, "Constraints updated successfully."
         return False, "Failed to update constraints."
 
@@ -342,11 +335,36 @@ class Manager:
         df = self.get_all_constraints()
         if df.empty:
             return df
-        return df[df['category'].isin(['shifts_for_day', 'shifts_per_day'])].copy()
+        return df[df['category'].isin(['Shifts per day'])].copy()
 
 
-    def update_fulltime_hours(self, hours):
-        """Updates the full-time hours baseline directly using a dedicated DAO method."""
-        if self.dao.update_single_constraint('contract_hours', 'Full-time', hours):
-            return True, "Full-time baseline hours set successfully."
-        return False, "Failed to set full-time baseline hours."
+    def update_single_constraint(self, category, key, new_value):
+        """Utility function to update a single constraint value, used for the holiday region and full-time hours."""
+        if self.dao.update_single_constraint(category, key, new_value):
+            return True, f"{key} constraint updated successfully."
+        return False, f"Failed to update {key} constraint. Please try again."
+
+
+    def dev_add_constraint(self, category, key, value_str, description):
+        """Developer tool to inject constraints natively."""
+        import json
+        if not category or not key:
+            return False, "Category and Key are required fields."
+        
+        parsed_value = None
+        if value_str:
+            try:
+                parsed_value = json.loads(value_str)
+            except Exception:
+                parsed_value = value_str  # Fallback to pure string if it isn't valid JSON list/number
+
+        if self.dao.dev_add_constraint(category, key, parsed_value, description):
+            return True, f"Constraint '{key}' successfully injected."
+        return False, "Failed to inject constraint."
+
+
+    def dev_delete_constraint(self, constraint_id):
+        """Developer tool to delete constraints by ID."""
+        if self.dao.dev_delete_constraint(constraint_id):
+            return True, f"Constraint with ID {constraint_id} has been deleted."
+        return False, "Failed to delete constraint. Please check the input and try again."

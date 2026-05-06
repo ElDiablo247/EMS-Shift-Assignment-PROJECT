@@ -67,6 +67,8 @@ class Homepage:
             pages.append(st.Page("pages/3_shifts.py", title="Shift Management"))
             pages.append(st.Page("pages/4_constraints.py", title="Constraints Management"))
             pages.append(st.Page("pages/5_assignments.py", title="Shift Generation Panel"))
+            pages.append(st.Page("pages/9_developer.py", title="Developer Tools"))
+
             pg = st.navigation(pages)
             pg.run()
         else:
