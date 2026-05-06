@@ -2,6 +2,7 @@ import streamlit as st
 from logic.manager import Manager
 from logic.auth_utils import ensure_authenticated
 import time
+import datetime
 
 
 class EmployeePage:
@@ -13,12 +14,16 @@ class EmployeePage:
     def add_employee_section(self):
         """Section for adding new employees to the system."""
         st.header("Employee Registration")
+        max_date = self.manager.max_allowed_date()
+        min_date = datetime.date(1900, 1, 1)
+
         name = st.text_input("Name")
+        date_of_birth = st.date_input("Date of Birth", value=max_date, min_value=min_date, max_value=max_date, format="DD/MM/YYYY")
         qualification = st.selectbox("Role", ["Paramedic", "Assistant"])
         contract_type = st.selectbox("Contract Type", ["100%", "75%", "50%", "Flexible"])
         
         if st.button("Add to System"):
-            success, message = self.manager.add_employee(name, qualification, contract_type)
+            success, message = self.manager.add_employee(name, date_of_birth, qualification, contract_type)
             if success:
                 st.success(message)
                 time.sleep(1.5)
@@ -66,6 +71,7 @@ class EmployeePage:
         column_config = {
             "id": st.column_config.NumberColumn("ID"),
             "name": st.column_config.TextColumn("Name"),
+            "date_of_birth": st.column_config.DateColumn("Date of Birth", format="DD/MM/YYYY", required=True),
             "qualification": st.column_config.SelectboxColumn("Role", options=["Paramedic", "Assistant"], required=True),
             "contract_type": st.column_config.SelectboxColumn("Contract Type", options=["100%", "75%", "50%", "Flexible"], required=True),
             "is_active": st.column_config.CheckboxColumn("Active", required=True)

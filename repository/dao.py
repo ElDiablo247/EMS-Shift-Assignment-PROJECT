@@ -104,7 +104,7 @@ class DatabaseAccess:
             return False
 
 
-    def add_employee(self, emp_id, name, qualification, contract_type):
+    def add_employee(self, emp_id, name, date_of_birth, qualification, contract_type):
         """
         Creates a new employee object and saves it to the database.
         """
@@ -114,6 +114,7 @@ class DatabaseAccess:
                 new_staff = Employee(
                     id=emp_id,
                     name=name,
+                    date_of_birth=date_of_birth,
                     qualification=qualification,
                     contract_type=contract_type
                 )

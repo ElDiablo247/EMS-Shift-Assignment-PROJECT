@@ -10,6 +10,7 @@ class Employee(Base):
     
     id = Column(Integer, primary_key=True, nullable=False)
     name = Column(String, nullable=False)
+    date_of_birth = Column(Date, nullable=False)
     qualification = Column(String, nullable=False) 
     contract_type = Column(String, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)

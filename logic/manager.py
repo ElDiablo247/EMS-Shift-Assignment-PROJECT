@@ -83,57 +83,11 @@ class Manager:
         return True
 
 
-    def upload_bulk_employees(self, uploaded_file):
-        """
-        Reads an uploaded file (CSV or Excel), converts it to a DataFrame,
-        and iterates through it to bulk add employees.
-        """
-        try:
-            if uploaded_file.name.endswith('.csv'):
-                df = pd.read_csv(uploaded_file)
-            else:
-                df = pd.read_excel(uploaded_file)
-        except Exception as e:
-            return False, f"Error reading file: {e}"
-
-        failed_rows = []
-        
-        if not df.empty:
-            # Make all column names to lowercase for accurate matching
-            df.columns = [col.lower().strip() for col in df.columns]
-
-            for index, row in df.iterrows():
-                name = row.get('name')
-                qualification = row.get('qualification')
-                contract_type = row.get('contract type')
-            
-                # If any employee fails validation or insertion, we add its index to the failed_rows list
-                success, _ = self.add_employee(name, qualification, contract_type)
-                if not success:
-                    failed_rows.append(str(index + 2))
-        else:
-            return False, "The uploaded file is empty. Please provide a valid file with employee data."
-        
-        message = "Bulk upload completed. The following rows failed (likely due to missing values): " + ", ".join(failed_rows) if failed_rows else "All employees added successfully."
-        return True, message
-
-
-    def upload_bulk_shifts(self):
-        """
-        Populates the shifts table with a predefined set of shifts. This is a one-click solution to quickly set up the system with commonly used shifts.
-        """
-        shifts = [
-            {"name": "K1", "start": "06:30", "end": "15:00", "duration": 8},
-            {"name": "K2", "start": "06:30", "end": "15:00", "duration": 8},
-            {"name": "K4", "start": "15:00", "end": "23:30", "duration": 8},
-            {"name": "K5", "start": "15:00", "end": "23:30", "duration": 8},
-            {"name": "K3", "start": "07:30", "end": "16:00", "duration": 8},
-            {"name": "K6", "start": "21:00", "end": "05:30", "duration": 8}
-        ]
-        for shift in shifts: 
-            start_time = datetime.strptime(shift["start"], "%H:%M").time()
-            end_time = datetime.strptime(shift["end"], "%H:%M").time()
-            self.add_shift(shift["name"], start_time, end_time, shift["duration"])
+    def max_allowed_date(self):
+        """Utility function to set the maximum allowed date for the date of birth field when adding employees."""
+        today = datetime.today()
+        max_date = datetime(today.year - 18, today.month, today.day)  # Assuming minimum working age is 18
+        return max_date.date()
 
 
     def delete_admin(self, admin_id):
@@ -154,12 +108,14 @@ class Manager:
         return False, "Failed to delete shift. Please check the ID and try again."
 
 
-    def add_employee(self, name, qualification, contract_type):
+    def add_employee(self, name, date_of_birth, qualification, contract_type):
         """
         Validates input, generates an ID, and calls DAO to save employee.
         """
         if not name:
             return False, "Validation failed: Name field is missing."
+        if not date_of_birth:
+            return False, "Validation failed: Date of birth field is missing."
         if not qualification:
             return False, "Validation failed: Qualification field is missing."
         if not contract_type:
@@ -171,7 +127,7 @@ class Manager:
             new_id = last_id + 1
         else:
             new_id = 6001  # Starting ID for employees if database is empty
-        success = self.dao.add_employee(new_id, name, qualification, contract_type)
+        success = self.dao.add_employee(new_id, name, date_of_birth, qualification, contract_type)
         if success:
             return True, "Employee added successfully."
         else:
@@ -368,3 +324,57 @@ class Manager:
         if self.dao.dev_delete_constraint(constraint_id):
             return True, f"Constraint with ID {constraint_id} has been deleted."
         return False, "Failed to delete constraint. Please check the input and try again."
+
+
+    def dev_upload_bulk_shifts(self):
+        """
+        Populates the shifts table with a predefined set of shifts. This is a one-click solution to quickly set up the system with commonly used shifts.
+        """
+        shifts = [
+            {"name": "K1", "start": "06:30", "end": "15:00", "duration": 8},
+            {"name": "K2", "start": "06:30", "end": "15:00", "duration": 8},
+            {"name": "K4", "start": "15:00", "end": "23:30", "duration": 8},
+            {"name": "K5", "start": "15:00", "end": "23:30", "duration": 8},
+            {"name": "K3", "start": "07:30", "end": "16:00", "duration": 8},
+            {"name": "K6", "start": "21:00", "end": "05:30", "duration": 8}
+        ]
+        for shift in shifts: 
+            start_time = datetime.strptime(shift["start"], "%H:%M").time()
+            end_time = datetime.strptime(shift["end"], "%H:%M").time()
+            self.add_shift(shift["name"], start_time, end_time, shift["duration"])
+
+
+    def dev_upload_bulk_employees(self):
+        """
+        Populates the database with the 16 staff members from the UI.
+        Includes date_of_birth (all > 18 years old) and explicit is_active status.
+        """
+        staff_data = [
+            {"name": "Tom Holland", "date_of_birth": "1996-06-01", "qualification": "Paramedic", "contract_type": "100%", "is_active": True},
+            {"name": "Raul Birta", "date_of_birth": "1992-03-15", "qualification": "Assistant", "contract_type": "75%", "is_active": True},
+            {"name": "Sarah Jenkins", "date_of_birth": "1988-11-20", "qualification": "Paramedic", "contract_type": "Flexible", "is_active": True},
+            {"name": "Michael Chen", "date_of_birth": "1994-07-12", "qualification": "Assistant", "contract_type": "100%", "is_active": True},
+            {"name": "Elena Rodriguez", "date_of_birth": "1991-01-30", "qualification": "Paramedic", "contract_type": "75%", "is_active": True},
+            {"name": "James Wilson", "date_of_birth": "1985-09-05", "qualification": "Assistant", "contract_type": "50%", "is_active": True},
+            {"name": "Amina Yusuf", "date_of_birth": "1997-04-22", "qualification": "Paramedic", "contract_type": "100%", "is_active": True},
+            {"name": "David Thompson", "date_of_birth": "1990-12-10", "qualification": "Assistant", "contract_type": "100%", "is_active": True},
+            {"name": "Lucia Rossi", "date_of_birth": "1993-02-28", "qualification": "Paramedic", "contract_type": "75%", "is_active": True},
+            {"name": "Kevin O'Sullivan", "date_of_birth": "1989-08-14", "qualification": "Assistant", "contract_type": "Flexible", "is_active": True},
+            {"name": "Sophie Martin", "date_of_birth": "1995-10-03", "qualification": "Paramedic", "contract_type": "100%", "is_active": True},
+            {"name": "Ahmed Al-Farsi", "date_of_birth": "1994-05-18", "qualification": "Assistant", "contract_type": "75%", "is_active": True},
+            {"name": "Emma Watson", "date_of_birth": "1990-04-15", "qualification": "Paramedic", "contract_type": "Flexible", "is_active": True},
+            {"name": "Liam Gallagher", "date_of_birth": "1972-09-21", "qualification": "Assistant", "contract_type": "100%", "is_active": True},
+            {"name": "Chloe Bennett", "date_of_birth": "1992-04-18", "qualification": "Paramedic", "contract_type": "50%", "is_active": True},
+            {"name": "Raaaa", "date_of_birth": "1997-12-29", "qualification": "Paramedic", "contract_type": "100%", "is_active": True}
+        ]
+
+        for person in staff_data:
+            # Convert string to date object
+            dob_obj = datetime.strptime(person["date_of_birth"], "%Y-%m-%d").date()
+
+            self.add_employee(
+                name=person["name"], 
+                date_of_birth=dob_obj, 
+                qualification=person["qualification"], 
+                contract_type=person["contract_type"]
+            )

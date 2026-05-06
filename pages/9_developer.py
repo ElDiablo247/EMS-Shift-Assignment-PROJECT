@@ -12,29 +12,18 @@ class DeveloperPage:
 
 
     def bulk_upload_section(self):
-        """Section for bulk uploading employees via Excel or CSV."""
-        st.header("Bulk Employee Upload")
-        st.info("Upload an Excel or CSV file with columns: Name, Role, Contract Type")
-        uploaded_file = st.file_uploader("Choose a file", type=["xlsx", "xls", "csv"])
-        
-        if uploaded_file is not None:
-            if st.button("Upload Data", use_container_width=True):
-                success, message = self.manager.upload_bulk_employees(uploaded_file)
-                if success:
-                    st.success(message)
-                else:
-                    st.error(message)
-
-
-    def bulk_upload_shifts_section(self):
         """Button for uploading predefined shifts."""
-        st.header("Shift Upload")
+        st.header("Employees & Shifts Bulk Upload")
+
         if st.button("Upload Shifts"):
-            self.manager.upload_bulk_shifts()
+            self.manager.dev_upload_bulk_shifts()
             st.success("Shifts populated successfully.")
+        if st.button("Upload Employees"):
+            self.manager.dev_upload_bulk_employees()
+            st.success("Employees populated successfully.")
 
 
-    def dev_add_constraint_section(self):
+    def add_constraint_section(self):
         """Developer widget to directly inject constraints without wiping the database."""
         st.header("Inject Constraint")
         st.info("Add a constraint directly. Type lists like [\"K1\"] or numbers like 40.0.")
@@ -54,7 +43,7 @@ class DeveloperPage:
                     st.error(message)
 
     
-    def dev_delete_constraint_section(self):
+    def delete_constraint_section(self):
         """Developer widget to delete constraints by ID."""
         st.header("Delete Constraint")
         st.info("Delete a constraint by specifying its ID.")
@@ -86,14 +75,12 @@ class DeveloperPage:
         col1, col2 = st.columns([2, 2], gap="xlarge")
         with col1:
             with st.container(border=True):
-                self.dev_add_constraint_section()
+                self.add_constraint_section()
         with col2:
             with st.container(border=True):
                 self.bulk_upload_section()
             with st.container(border=True):
-                self.bulk_upload_shifts_section()
-            with st.container(border=True):
-                self.dev_delete_constraint_section()
+                self.delete_constraint_section()
 
 
 if __name__ == "__main__":
