@@ -2,11 +2,15 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 from contextlib import contextmanager
 from repository.models import Base
+from dotenv import load_dotenv
+import os
 
+load_dotenv()
 
 class DatabaseEngine:
-    def __init__(self, db_url='sqlite:///ems_database.db'):
-        
+    def __init__(self):
+
+        db_url = os.getenv("DATABASE_URL")
         self.engine = create_engine(db_url)
         self._session_factory = sessionmaker(bind=self.engine)
         Base.metadata.create_all(self.engine)
