@@ -1,5 +1,5 @@
 from repository.db_engine import db_obj
-from repository.models import Employee, Shift, Admin, Constraint
+from repository.models import Employee, Shift, Admin, Constraint, Holiday, Assignment
 import pandas as pd
 
 class DatabaseAccess:
@@ -324,6 +324,23 @@ class DatabaseAccess:
             return False
 
 
+    def get_single_constraint(self, category, key):
+        """
+        Retrieves the value of a single constraint based on category and key.
+        """
+        try:
+            with self.db.get_session() as session:
+                constraint = session.query(Constraint).filter(
+                    Constraint.category == category, 
+                    Constraint.constraint_key == key
+                ).first()
+                if constraint:
+                    return constraint.constraint_value
+        except Exception as e:
+            print(f"Error retrieving single constraint: {e}")
+            return None
+
+
     def dev_add_constraint(self, category, key, value, description):
         """Directly inserts a single constraint (Developer tool)."""
         try:
@@ -351,3 +368,124 @@ class DatabaseAccess:
         except Exception as e:
             print(f"Error deleting constraint: {e}")
             return False
+
+
+    def insert_holiday(self, year, date, name):
+        """Inserts a holiday into the holidays table."""
+        try:
+            with self.db.get_session() as session:
+                new_holiday = Holiday(
+                    year=year,
+                    date=date,
+                    name=name
+                )
+                session.add(new_holiday)
+            return True
+        except Exception as e:
+            print(f"Error inserting holiday: {e}")
+            return False
+
+
+    def holiday_year_exists(self, year_input):
+        """Checks if holidays for a specific year are already in the constraints table."""
+        try:
+            with self.db.get_session() as session:
+                exists = session.query(Constraint).filter(
+                    Constraint.category == 'holidays',
+                    Constraint.constraint_key == str(year_input)
+                ).first()
+                return exists is not None
+        except Exception as e:
+            print(f"Error checking holiday year: {e}")
+            return False
+
+
+    def get_constraints_by_category(self, category):
+        """
+        Retrieves all constraints for a given category and returns them as a dictionary 
+        mapping constraint keys to their values.
+        """
+        try:
+            with self.db.get_session() as session:
+                constraints = session.query(Constraint).filter(Constraint.category == category).all()
+                return {c.constraint_key: c.constraint_value for c in constraints}
+        except Exception as e:
+            print(f"Error retrieving constraints for category '{category}': {e}")
+            return {}
+        
+
+    def get_holidays_by_year(self, year):
+        """Retrieves all holidays for a given year."""
+        try:
+            with self.db.get_session() as session:
+                holidays = session.query(Holiday).filter(Holiday.year == year).all()
+                return [h.date for h in holidays]
+        except Exception as e:
+            print(f"Error retrieving holidays for year {year}: {e}")
+            return []
+
+
+    def insert_empty_assignment(self, date, shift_id, employee_id=None):
+        """Inserts a single assignment record into the database."""
+        try:
+            with self.db.get_session() as session:
+                new_assignment = Assignment(
+                    date=date,
+                    shift_id=shift_id,
+                    employee_id=employee_id
+                )
+                session.add(new_assignment)
+            return True
+        except Exception as e:
+            print(f"Error inserting assignment: {e}")
+            return False
+
+
+    def bulk_insert_assignments(self, assignments_list):
+        """Bulk inserts a list of assignment dictionaries into the database."""
+        try:
+            with self.db.get_session() as session:
+                session.bulk_insert_mappings(Assignment, assignments_list)
+            return True
+        except Exception as e:
+            print(f"Error bulk inserting assignments: {e}")
+            return False
+
+
+    def get_assignments_for_month(self, month, year):
+        """Retrieves assignments for a specific month and year with shift and employee details."""
+        import calendar
+        import datetime
+        try:
+            _, num_days = calendar.monthrange(year, month)
+            start_date = datetime.date(year, month, 1)
+            end_date = datetime.date(year, month, num_days)
+            
+            with self.db.get_session() as session:
+                query = session.query(
+                    Assignment.date,
+                    Shift.shift_name,
+                    Employee.name.label('employee_name')
+                ).outerjoin(Shift, Assignment.shift_id == Shift.id)\
+                .outerjoin(Employee, Assignment.employee_id == Employee.id)\
+                .filter(Assignment.date >= start_date, Assignment.date <= end_date)\
+                .order_by(Assignment.date, Shift.shift_name)
+                
+                return pd.read_sql(query.statement, session.bind)
+        except Exception as e:
+            print(f"Error retrieving assignments: {e}")
+            return pd.DataFrame()
+
+
+    def get_all_holidays(self, year=None):
+        """Retrieves holidays from the database, optionally filtered by year, ordered chronologically."""
+        try:
+            with self.db.get_session() as session:
+                query = session.query(Holiday)
+                if year:
+                    query = query.filter(Holiday.year == year)
+                query = query.order_by(Holiday.date.asc())
+                return pd.read_sql(query.statement, session.bind)
+        except Exception as e:
+            print(f"Error retrieving all holidays: {e}")
+            return pd.DataFrame()

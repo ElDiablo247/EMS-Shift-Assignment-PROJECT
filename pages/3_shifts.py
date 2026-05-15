@@ -16,7 +16,7 @@ class ShiftPage:
         name = st.text_input("Shift Name")
         start = st.time_input("Start Time", value=None)
         end = st.time_input("End Time", value=None)
-        duration = st.number_input("Duration (hours)", max_value=12.0, step=0.5)
+        duration = st.number_input("Duration (hours)", value=8.0, max_value=12.0, step=0.5)
         
         if st.button("Add Shift"):
             success, message = self.manager.add_shift(name, start, end, duration)
@@ -104,11 +104,13 @@ class ShiftPage:
             
         col1, col2 = st.columns([3, 7], gap="xlarge")
         with col1:
-            self.add_shift_section()
-            st.markdown("---")
-            self.delete_shift_section()
+            with st.container(border=True):
+                self.add_shift_section()
+            with st.container(border=True):
+                self.delete_shift_section()
         with col2:
-            self.display_shift_table()
+            with st.container(border=True):
+                self.display_shift_table()
 
 
 if __name__ == "__main__":

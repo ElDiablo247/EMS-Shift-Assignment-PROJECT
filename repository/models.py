@@ -42,7 +42,7 @@ class Assignment(Base):
     __tablename__ = 'assignments'
     
     id = Column(Integer, primary_key=True)
-    date = Column(Date, nullable=False)
+    date = Column(Date, nullable=False, index=True)
     shift_id = Column(Integer, ForeignKey('shifts.id'), nullable=False)
     employee_id = Column(Integer, ForeignKey('employees.id'), nullable=True)
 
@@ -59,3 +59,12 @@ class Constraint(Base):
     constraint_key = Column(String, nullable=False)    
     constraint_value = Column(JSON, nullable=True)
     description = Column(String, nullable=False)
+
+
+class Holiday(Base):
+    __tablename__ = 'holidays'
+    
+    id = Column(Integer, primary_key=True)
+    year = Column(Integer, nullable=False)
+    date = Column(Date, nullable=False, unique=True)
+    name = Column(String, nullable=False)

@@ -378,3 +378,34 @@ class Manager:
                 qualification=person["qualification"], 
                 contract_type=person["contract_type"]
             )
+
+
+    def get_assignments_pivot(self, month, year):
+        """Fetches assignments for a month and pivots them into a wide format for the UI."""
+        df = self.dao.get_assignments_for_month(month, year)
+        if df.empty:
+            return df
+            
+        # Differentiate between the 2 identical shift assignments (Paramedic vs Assistant)
+        df['slot'] = df.groupby(['date', 'shift_name']).cumcount()
+        role_map = {0: 'RS', 1: 'RH'}
+        df['shift_role'] = df['shift_name'] + ' (' + df['slot'].map(role_map).fillna(df['slot'].astype(str)) + ')'
+        
+        # Format date so the pivot column headers look nice
+        df['date'] = pd.to_datetime(df['date']).dt.strftime('%d.%m.%Y')
+        
+        # Replace NaN with 'Unassigned' ONLY for slots that actually exist in the DB
+        df['employee_name'] = df['employee_name'].fillna("Empty")
+        
+        # Pivot: index=shift_role, columns=date, values=employee_name
+        pivot_df = df.pivot(index='shift_role', columns='date', values='employee_name')
+        
+        # Replace NaN with '-' for cells created by the pivot (shifts that don't run that day)
+        pivot_df = pivot_df.fillna("-")
+        
+        # Reset index to make 'shift_role' a standard column, and rename it for the UI
+        pivot_df = pivot_df.reset_index()
+        pivot_df = pivot_df.rename(columns={'shift_role': 'Shift'})
+        pivot_df.columns.name = None
+        
+        return pivot_df
