@@ -1,14 +1,13 @@
 import streamlit as st
 from logic.auth_utils import ensure_authenticated
-from logic.manager import Manager
+from logic.auth_manager import AuthManager
 import time
-import pandas as pd
 
 
 class AdminPage:
     def __init__(self):
         ensure_authenticated(role_required='super')
-        self.manager = Manager()
+        self.auth_manager = AuthManager()
 
 
     def register_admin_section(self):
@@ -20,7 +19,7 @@ class AdminPage:
         role = st.selectbox("Role", ["basic"])
         
         if st.button("Add to System"):
-            success, message = self.manager.register_basic_admin(username, password, confirm_password, role)
+            success, message = self.auth_manager.register_basic_admin(username, password, confirm_password, role)
             if success:
                 st.success(message)
                 time.sleep(1.5)
@@ -29,11 +28,10 @@ class AdminPage:
                 st.error(message)
 
 
-
     def display_admins_table(self):
         """Displays the admins with a custom layout and delete buttons."""
         st.header("Registered Admins")
-        admins_df = self.manager.get_all_admins()
+        admins_df = self.auth_manager.get_all_admins()
         
         if admins_df.empty:
             st.info("No admins found.")
@@ -62,7 +60,7 @@ class AdminPage:
                     st.error("Cannot delete the default super admin.")
                     return
                 
-                success, message = self.manager.delete_admin(id_to_delete)
+                success, message = self.auth_manager.delete_admin(id_to_delete)
                 if success:
                     st.success(message)
                     time.sleep(1.5)

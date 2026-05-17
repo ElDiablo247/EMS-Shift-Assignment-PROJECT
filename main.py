@@ -1,5 +1,6 @@
 import streamlit as st
-from logic.manager import Manager
+from logic.auth_manager import AuthManager
+from logic.constraint_manager import ConstraintManager
 import time
 
 
@@ -8,7 +9,8 @@ st.set_page_config(page_title="Shifts Planner for EMS", layout="wide")
 
 class Homepage:
     def __init__(self):
-        self.manager = Manager()
+        self.auth_manager = AuthManager()
+        self.constraint_manager = ConstraintManager()
 
 
     def render_login(self):
@@ -18,7 +20,7 @@ class Homepage:
             username = st.text_input("Username")
             password = st.text_input("Password", type="password")
             if st.form_submit_button("Login"):
-                success, role = self.manager.verify_login(username, password)
+                success, role = self.auth_manager.verify_login(username, password)
                 if success:
                     st.session_state['logged_in'] = True
                     st.session_state['username'] = username
@@ -37,13 +39,13 @@ class Homepage:
             password = st.text_input("Password", type="password")
             confirm_password = st.text_input("Confirm Password", type="password")
             if st.form_submit_button("Register SUPER Admin"):
-                success, message = self.manager.register_super_admin(username, password, confirm_password)
+                success, message = self.auth_manager.register_super_admin(username, password, confirm_password)
                 if success:
                     st.success(message)
                     st.info("Registration successful. Please log in with your new credentials.")
                     time.sleep(1.5)
 
-                    success2, message2 = self.manager.populate_constraints()
+                    success2, message2 = self.constraint_manager.populate_constraints()
                     if success2:
                         st.success(message2)
                         time.sleep(1.5)
@@ -66,13 +68,13 @@ class Homepage:
             pages.append(st.Page("pages/2_employees.py", title="Staff Management"))
             pages.append(st.Page("pages/3_shifts.py", title="Shift Management"))
             pages.append(st.Page("pages/4_constraints.py", title="Constraints Management"))
-            pages.append(st.Page("pages/5_assignments.py", title="Shift Generation Panel"))
+            pages.append(st.Page("pages/5_assignments.py", title="Shift Schedule Panel"))
             pages.append(st.Page("pages/9_developer.py", title="Developer Tools"))
 
             pg = st.navigation(pages)
             pg.run()
         else:
-            if self.manager.admins_exist():
+            if self.auth_manager.admins_exist():
                 pg = st.navigation([st.Page(self.render_login, title="Log In")])
             else:
                 pg = st.navigation([st.Page(self.render_registration, title="First-Time Setup")])

@@ -1,6 +1,7 @@
 import streamlit as st
 from logic.auth_utils import ensure_authenticated
-from logic.manager import Manager
+from logic.constraint_manager import ConstraintManager
+from logic.shift_manager import ShiftManager
 import pandas as pd
 import time
 
@@ -8,14 +9,15 @@ import time
 class ConstraintsPage:
     def __init__(self):
         ensure_authenticated()
-        self.manager = Manager()
+        self.constraint_manager = ConstraintManager()
+        self.shift_manager = ShiftManager()
 
 
     def overview_section(self):
         """Displays a read-only overview of all system constraints."""
         st.header("Configuration Overview")
         st.info("Current active rules for the system.")
-        df = self.manager.get_all_constraints()
+        df = self.constraint_manager.get_all_constraints()
         
         if not df.empty:
             # Convert the constraint_value column to strings
@@ -40,8 +42,8 @@ class ConstraintsPage:
         st.info("Select the shifts that should run on each day category.")
         
         # 1. Fetch the shifts per day constraints from the database and the shift names, with the help of the manager.
-        shifts_df = self.manager.get_shifts_per_day_constraints()
-        available_shifts = self.manager.return_shift_names()
+        shifts_df = self.constraint_manager.get_shifts_per_day_constraints()
+        available_shifts = self.shift_manager.return_shift_names()
         
         # 2. Configure the data_editor columns
         column_config = {
@@ -68,7 +70,7 @@ class ConstraintsPage:
             
             # 4. Save Changes
             if st.form_submit_button("Save Constraints"):
-                success, message = self.manager.update_multiple_constraints(edited_df)
+                success, message = self.constraint_manager.update_multiple_constraints(edited_df)
                 if success:
                     st.success(message)
                     time.sleep(1.5)
@@ -87,7 +89,7 @@ class ConstraintsPage:
             options=[37.5, 40.0, 42.5]
         )
         if st.button("Save Contract Hours"):
-            success, message = self.manager.update_single_constraint("Contract hours", "Full-time", selected_hours)
+            success, message = self.constraint_manager.update_single_constraint("Contract hours", "Full-time", selected_hours)
             if success:
                 st.success(message)
                 time.sleep(1.5)
@@ -103,7 +105,7 @@ class ConstraintsPage:
 
         state_code = st.selectbox("State Code", options=["BE", "BW", "BY", "HB", "HE", "HH", "MV", "NI", "NW", "RP", "SL", "SN", "ST", "SH", "TH"])
         if st.button("Save Region"):
-            success, message = self.manager.update_single_constraint("Holidays", "Region", state_code)
+            success, message = self.constraint_manager.update_single_constraint("Holidays", "Region", state_code)
             if success:
                 st.success(message)
                 time.sleep(1.5)

@@ -1,5 +1,5 @@
 import streamlit as st
-from logic.manager import Manager
+from logic.shift_manager import ShiftManager
 from logic.auth_utils import ensure_authenticated
 import time
 
@@ -7,7 +7,7 @@ import time
 class ShiftPage:
     def __init__(self):
         ensure_authenticated()
-        self.manager = Manager()
+        self.shift_manager = ShiftManager()
 
 
     def add_shift_section(self):
@@ -19,7 +19,7 @@ class ShiftPage:
         duration = st.number_input("Duration (hours)", value=8.0, max_value=12.0, step=0.5)
         
         if st.button("Add Shift"):
-            success, message = self.manager.add_shift(name, start, end, duration)
+            success, message = self.shift_manager.add_shift(name, start, end, duration)
             if success:
                 st.success(message)
                 time.sleep(1.5)
@@ -39,7 +39,7 @@ class ShiftPage:
                     st.error('Only "super" admins are allowed to delete.')
                     return
                 
-                success, message = self.manager.delete_shift(id_to_delete)
+                success, message = self.shift_manager.delete_shift(id_to_delete)
                 if success:
                     st.success(message)
                     time.sleep(1.5)
@@ -53,14 +53,14 @@ class ShiftPage:
         st.header("Shift Management")
         
         if st.button("Clear All Shifts"):
-            success, message = self.manager.empty_shifts_database()
+            success, message = self.shift_manager.empty_shifts_database()
             if success:
                 st.success(message)
                 time.sleep(1.5)
                 st.rerun()
             else:
                 st.error(message)
-        shifts = self.manager.get_all_shifts()
+        shifts = self.shift_manager.get_all_shifts()
         if shifts.empty:
             st.info("No shifts defined. Use the sidebar to add them.")
             return
@@ -81,7 +81,7 @@ class ShiftPage:
             disabled=["id"]
         )
         if st.button("Save Changes"):
-            success, message = self.manager.update_shifts(edited_df)
+            success, message = self.shift_manager.update_shifts(edited_df)
             if success:
                 st.success(message)
                 time.sleep(1.5)

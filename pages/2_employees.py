@@ -1,5 +1,5 @@
 import streamlit as st
-from logic.manager import Manager
+from logic.staff_manager import StaffManager
 from logic.auth_utils import ensure_authenticated
 import time
 import datetime
@@ -8,13 +8,13 @@ import datetime
 class EmployeePage:
     def __init__(self):
         ensure_authenticated()
-        self.manager = Manager()
+        self.staff_manager = StaffManager()
 
 
     def add_employee_section(self):
         """Section for adding new employees to the system."""
         st.header("Employee Registration")
-        max_date = self.manager.max_allowed_date()
+        max_date = self.staff_manager.max_allowed_date()
         min_date = datetime.date(1900, 1, 1)
 
         name = st.text_input("Name")
@@ -23,7 +23,7 @@ class EmployeePage:
         contract_type = st.selectbox("Contract Type", ["100%", "75%", "50%", "Flexible"])
         
         if st.button("Add to System"):
-            success, message = self.manager.add_employee(name, date_of_birth, qualification, contract_type)
+            success, message = self.staff_manager.add_employee(name, date_of_birth, qualification, contract_type)
             if success:
                 st.success(message)
                 time.sleep(1.5)
@@ -43,7 +43,7 @@ class EmployeePage:
                     st.error('Only "super" admins are allowed to delete.')
                     return
                 
-                success, message = self.manager.delete_employee(id_to_delete)
+                success, message = self.staff_manager.delete_employee(id_to_delete)
                 if success:
                     st.success(message)
                     time.sleep(1.5)
@@ -57,14 +57,14 @@ class EmployeePage:
         st.header("Staff Management")
         
         if st.button("Wipe Employee Data", help="Danger: This will delete all employees."):
-            success, message = self.manager.empty_employee_database()
+            success, message = self.staff_manager.empty_employee_database()
             if success:
                 st.success(message)
                 time.sleep(1.5)
                 st.rerun()
             else:
                 st.error(message)
-        personnel = self.manager.get_all_employees()
+        personnel = self.staff_manager.get_all_employees()
         if personnel.empty:
             st.info("No staff registered yet. Use the sidebar to add employees.")
             return
@@ -86,7 +86,7 @@ class EmployeePage:
             disabled=["id"]
         )
         if st.button("Save Changes"):
-            success, message = self.manager.update_employees(edited_df)
+            success, message = self.staff_manager.update_employees(edited_df)
             if success:
                 st.success(message)
                 time.sleep(1.5)

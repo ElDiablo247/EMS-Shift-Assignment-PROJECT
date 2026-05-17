@@ -1,5 +1,5 @@
 import streamlit as st
-from logic.manager import Manager
+from logic.dev_tools import Developer
 from logic.auth_utils import ensure_authenticated
 import time
 
@@ -8,7 +8,7 @@ class DeveloperPage:
     def __init__(self):
         # Restrict this purely to super admins (devs)
         ensure_authenticated(role_required='super')
-        self.manager = Manager()
+        self.developer = Developer()
 
 
     def bulk_upload_section(self):
@@ -16,11 +16,11 @@ class DeveloperPage:
         st.header("Employees & Shifts Bulk Upload")
 
         if st.button("Upload Shifts"):
-            self.manager.dev_upload_bulk_shifts()
-            st.success("Shifts populated successfully.")
+            success, msg = self.developer.dev_upload_bulk_shifts()
+            st.success(msg)
         if st.button("Upload Employees"):
-            self.manager.dev_upload_bulk_employees()
-            st.success("Employees populated successfully.")
+            success, msg = self.developer.dev_upload_bulk_employees()
+            st.success(msg)
 
 
     def add_constraint_section(self):
@@ -34,7 +34,7 @@ class DeveloperPage:
             description = st.text_input("Description")
             
             if st.form_submit_button("Inject to Database"):
-                success, message = self.manager.dev_add_constraint(category, key, value_str, description)
+                success, message = self.developer.dev_add_constraint(category, key, value_str, description)
                 if success:
                     st.success(message)
                     time.sleep(1.5)
@@ -51,7 +51,7 @@ class DeveloperPage:
             constraint_id = st.number_input("Constraint ID", min_value=1, step=1)
             
             if st.form_submit_button("Delete Constraint"):
-                success, message = self.manager.dev_delete_constraint(constraint_id)
+                success, message = self.developer.dev_delete_constraint(constraint_id)
                 if success:
                     st.success(message)
                     time.sleep(1.5)

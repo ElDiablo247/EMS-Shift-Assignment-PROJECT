@@ -1,7 +1,7 @@
 import streamlit as st
 from logic.auth_utils import ensure_authenticated
-from logic.algorithm import PlanGenerator
-from logic.manager import Manager
+from logic.schedule_manager import ScheduleManager
+from logic.staff_manager import StaffManager
 import datetime
 import time
 
@@ -9,8 +9,8 @@ import time
 class AssignmentPage:
     def __init__(self):
         ensure_authenticated()
-        self.manager = Manager()
-        self.generator = PlanGenerator()
+        self.staff_manager = StaffManager()
+        self.schedule_manager = ScheduleManager()
 
 
     def generate_plan_section(self):
@@ -24,13 +24,14 @@ class AssignmentPage:
             st.info("Generate the public holidays for a specific year. This must be done before generating a template.")
             year_for_holidays = st.number_input("Year", min_value=datetime.datetime.now().year - 1, max_value=2130, value=datetime.datetime.now().year, step=1, key="holiday_year")
             if st.button("Generate Holidays"):
-                success, message = self.generator.generate_holidays(year_for_holidays)
+                success, message = self.schedule_manager.generate_holidays(year_for_holidays)
                 if success:
                     st.success(message)
+                    time.sleep(1.5)
+                    st.rerun()
                 else:
                     st.error(message)
-                time.sleep(1.5)
-                st.rerun()
+
 
         with tab2:
             st.subheader("Monthly Template Generation")
@@ -43,10 +44,13 @@ class AssignmentPage:
                 year = st.number_input("Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1)
 
             if st.button("Generate Empty Template"):
-                self.generator.generate_logic(month, year)
-                st.success(f"Successfully generated empty template for {month}/{year}!")
-                time.sleep(1.5)
-                st.rerun()
+                success, message = self.schedule_manager.generate_logic(month, year)
+                if success:
+                    st.success(message)
+                    time.sleep(1.5)
+                    st.rerun()
+                else:
+                    st.error(message)
 
 
     def display_holidays_section(self):
@@ -56,7 +60,7 @@ class AssignmentPage:
         now = datetime.datetime.now()
         view_year = st.number_input("View Holidays for Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="holiday_view_year")
         
-        holidays_df = self.generator.get_all_holidays_df(year=view_year)
+        holidays_df = self.schedule_manager.get_all_holidays_df(year=view_year)
         if holidays_df.empty:
             st.warning(f"No holidays found for {view_year}. Use the 'Generate Holidays' tool.")
         else:
@@ -75,7 +79,7 @@ class AssignmentPage:
         with col2:
             view_year = st.number_input("View Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="view_year")
 
-        df = self.manager.get_assignments_pivot(view_month, view_year)
+        df = self.schedule_manager.get_assignments_pivot(view_month, view_year)
 
         if df.empty:
             st.warning(f"No assignments found for {view_month}/{view_year}.")

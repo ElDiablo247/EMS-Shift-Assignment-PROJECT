@@ -1,6 +1,8 @@
 from repository.db_engine import db_obj
 from repository.models import Employee, Shift, Admin, Constraint, Holiday, Assignment
 import pandas as pd
+import calendar
+import datetime
 
 class DatabaseAccess:
     def __init__(self):
@@ -265,7 +267,7 @@ class DatabaseAccess:
         except Exception as e:
             print(f"Error updating data: {e}")
             return False
-        
+
 
     def populate_constraints(self, constraints_list):
         """
@@ -356,7 +358,7 @@ class DatabaseAccess:
         except Exception as e:
             print(f"Error dev inserting constraint: {e}")
             return False
-        
+
 
     def dev_delete_constraint(self, constraint_id):
         """Developer tool to delete constraints by ID."""
@@ -412,7 +414,7 @@ class DatabaseAccess:
         except Exception as e:
             print(f"Error retrieving constraints for category '{category}': {e}")
             return {}
-        
+
 
     def get_holidays_by_year(self, year):
         """Retrieves all holidays for a given year."""
@@ -454,8 +456,7 @@ class DatabaseAccess:
 
     def get_assignments_for_month(self, month, year):
         """Retrieves assignments for a specific month and year with shift and employee details."""
-        import calendar
-        import datetime
+        
         try:
             _, num_days = calendar.monthrange(year, month)
             start_date = datetime.date(year, month, 1)
@@ -489,3 +490,13 @@ class DatabaseAccess:
         except Exception as e:
             print(f"Error retrieving all holidays: {e}")
             return pd.DataFrame()
+
+
+    def assignments_exist_for_date(self, target_date):
+        """Dumb check to see if any assignment exists on a specific date."""
+        try:
+            with self.db.get_session() as session:
+                return session.query(Assignment).filter(Assignment.date == target_date).first() is not None
+        except Exception as e:
+            print(f"Error checking assignment on date: {e}")
+            return False
