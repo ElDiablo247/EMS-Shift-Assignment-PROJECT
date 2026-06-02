@@ -24,7 +24,7 @@ class AssignmentPage:
             st.info("Generate the public holidays for a specific year. This must be done before generating a template.")
             year_for_holidays = st.number_input("Year", min_value=datetime.datetime.now().year - 1, max_value=2130, value=datetime.datetime.now().year, step=1, key="holiday_year")
             if st.button("Generate Holidays"):
-                success, message = self.schedule_manager.generate_holidays(year_for_holidays)
+                success, message = self.schedule_manager.generate_year_holidays(year_for_holidays)
                 if success:
                     st.success(message)
                     time.sleep(1.5)
@@ -44,7 +44,7 @@ class AssignmentPage:
                 year = st.number_input("Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1)
 
             if st.button("Generate Empty Template"):
-                success, message = self.schedule_manager.generate_logic(month, year)
+                success, message = self.schedule_manager.generate_template_data(month, year)
                 if success:
                     st.success(message)
                     time.sleep(1.5)

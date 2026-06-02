@@ -455,7 +455,7 @@ class DatabaseAccess:
 
 
     def get_assignments_for_month(self, month, year):
-        """Retrieves assignments for a specific month and year with shift and employee details."""
+        """Retrieves raw assignments for a specific month and year."""
         
         try:
             _, num_days = calendar.monthrange(year, month)
@@ -463,14 +463,9 @@ class DatabaseAccess:
             end_date = datetime.date(year, month, num_days)
             
             with self.db.get_session() as session:
-                query = session.query(
-                    Assignment.date,
-                    Shift.shift_name,
-                    Employee.name.label('employee_name')
-                ).outerjoin(Shift, Assignment.shift_id == Shift.id)\
-                .outerjoin(Employee, Assignment.employee_id == Employee.id)\
+                query = session.query(Assignment)\
                 .filter(Assignment.date >= start_date, Assignment.date <= end_date)\
-                .order_by(Assignment.date, Shift.shift_name)
+                .order_by(Assignment.date)
                 
                 return pd.read_sql(query.statement, session.bind)
         except Exception as e:

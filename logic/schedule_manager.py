@@ -10,7 +10,7 @@ class ScheduleManager:
         self.dao = DatabaseAccess()
 
 
-    def generate_logic(self, month, year):
+    def generate_template_data(self, month, year):
         """Generates the needed data for the empty template generation process"""
 
         # 1. Business logic check: If the 1st of the month exists, the template is already generated.
@@ -30,12 +30,12 @@ class ScheduleManager:
         shift_map = dict(zip(shifts_df['shift_name'], shifts_df['id'])) # Key: shift_name, Value: shift_id
 
         # 4. Iterate through the dates, determine their type, and create 2 empty assignments per shift
-        self.iterate_dates(month_dates, year, shift_map)
+        self.generate_empty_template(month_dates, year, shift_map)
         
         return True, f"Successfully generated empty template for {month}/{year}!"
 
 
-    def iterate_dates(self, month_dates, year, shift_map):
+    def generate_empty_template(self, month_dates, year, shift_map):
         """Iterates through the dates of the month, determines their type, and creates empty shift assignments based on constraints."""
         
         shifts_per_day_dict = self.dao.get_constraints_by_category("Shifts per day")
@@ -88,7 +88,7 @@ class ScheduleManager:
             return "Weekdays"
 
 
-    def generate_holidays(self, year):
+    def generate_year_holidays(self, year):
         """Generates a list of holidays for the given year."""
         region = self.dao.get_single_constraint("Holidays", "Region")
         if not region:
@@ -112,6 +112,18 @@ class ScheduleManager:
         if df.empty:
             return df
             
+        # Fetch related data to perform the joins in-memory
+        shifts_df = self.dao.get_all_shifts()
+        employees_df = self.dao.get_all_employees()
+        
+        # Map shift_id to shift_name using a dictionary
+        shift_name_map = dict(zip(shifts_df['id'], shifts_df['shift_name']))
+        df['shift_name'] = df['shift_id'].map(shift_name_map)
+        
+        # Map employee_id to employee name
+        emp_name_map = dict(zip(employees_df['id'], employees_df['name']))
+        df['employee_name'] = df['employee_id'].map(emp_name_map)
+
         # Differentiate between the 2 identical shift assignments (Paramedic vs Assistant)
         df['slot'] = df.groupby(['date', 'shift_name']).cumcount()
         role_map = {0: 'RS', 1: 'RH'}
