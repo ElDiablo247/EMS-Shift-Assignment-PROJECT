@@ -1,3 +1,4 @@
+import random
 from repository.dao import DatabaseAccess
 import pandas as pd
 import calendar
@@ -153,15 +154,6 @@ class ScheduleManager:
         return pivot_df
 
 
-    def load_data_for_assignment(self, month, year):
-        """Fetches assignments, employees, and shifts for a given month/year and returns an initialized DataHolder."""
-        assignments_df = self.dao.get_assignments_for_month(month, year)
-        employees_df = self.dao.get_all_employees()
-        shifts_df = self.dao.get_all_shifts()
-        
-        return DataHolder(month, year, assignments_df, employees_df, shifts_df)
-
-
     def save_edited_assignments(self, edited_df):
         """Translates the edited UI grid back into database updates (un-pivot)."""
         
@@ -199,3 +191,48 @@ class ScheduleManager:
                 })
                 
         return self.dao.update_monthly_assignments(updates_list), "Schedule saved successfully!"
+
+
+    def load_data_for_assignment(self, month, year):
+        """Fetches assignments, employees, and shifts for a given month/year and returns an initialized DataHolder."""
+        assignments_df = self.dao.get_assignments_for_month(month, year)
+        employees_df = self.dao.get_all_employees()
+        shifts_df = self.dao.get_all_shifts()
+        
+        return DataHolder(month, year, assignments_df, employees_df, shifts_df)
+    
+
+    def assign_paramedics_to_shifts(self, month, year):
+        """Developer tool to assign paramedics to all empty RS slots for a given month/year. This is a one-click solution to quickly fill the schedule with valid assignments."""
+        data_holder = self.load_data_for_assignment(month, year)
+        shift_ids = list(data_holder.shifts.keys())
+        
+        # Iterate over the week keys ('week1', 'week2')
+        for week_key, dates_dict in data_holder.weekday_weeks.items():
+            # Refresh the pool of employees for the new week
+            fulltime_employees_ids = list(data_holder.employees.keys())
+            
+            random.shuffle(shift_ids)
+            random.shuffle(fulltime_employees_ids)
+            for local_shift_id in shift_ids: 
+                local_employee = None
+                
+                # Find the next available RS employee
+                while fulltime_employees_ids:
+                    candidate_id = fulltime_employees_ids.pop()
+                    if data_holder.employees[candidate_id].get('qualification') == 'RS':
+                        local_employee = candidate_id
+                        break
+                
+                if local_employee:
+                    for date in dates_dict:
+                        if local_shift_id in data_holder.assignments_local.get(date, {}):
+                            data_holder.assignments_local[date][local_shift_id]["RS"] = local_employee
+                            
+        # Extract the new assignments and send them to the database
+        updates_list = data_holder.get_db_updates()
+        if updates_list:
+            if self.dao.update_monthly_assignments(updates_list):
+                return True, f"Successfully auto-assigned {len(updates_list)} paramedic slots!"
+            return False, "Database error: Failed to save the auto-assignments."
+        return False, "No paramedics were available to assign."

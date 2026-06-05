@@ -1,7 +1,9 @@
 import streamlit as st
 from logic.dev_tools import Developer
 from logic.auth_utils import ensure_authenticated
+from logic.schedule_manager import ScheduleManager
 import time
+import datetime
 
 
 class DeveloperPage:
@@ -9,6 +11,7 @@ class DeveloperPage:
         # Restrict this purely to super admins (devs)
         ensure_authenticated(role_required='super')
         self.developer = Developer()
+        self.schedule_manager = ScheduleManager()
 
 
     def bulk_upload_section(self):
@@ -60,6 +63,50 @@ class DeveloperPage:
                     st.error(message)
 
 
+    def dataholder_test_section(self):
+        """Section to instantiate DataHolder and test its dictionaries."""
+        st.header("DataHolder Tester")
+        st.info("Load the DataHolder for a specific month and print its data to the console.")
+        
+        now = datetime.datetime.now()
+        col1, col2 = st.columns(2)
+        with col1:
+            month = st.number_input("Test Month", min_value=1, max_value=12, value=now.month, step=1, key="dh_test_month")
+        with col2:
+            year = st.number_input("Test Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="dh_test_year")
+            
+        if st.button("Load DataHolder"):
+            dh = self.schedule_manager.load_data_for_assignment(month, year)
+            st.session_state['test_dataholder'] = dh
+            st.success(f"DataHolder for {month}/{year} initialized and saved in memory.")
+            
+        if st.button("Print Dictionaries to UI"):
+            if 'test_dataholder' in st.session_state:
+                debug_str = st.session_state['test_dataholder'].get_debug_string()
+                st.code(debug_str, language="plaintext")
+            else:
+                st.error("Please click 'Load DataHolder' first.")
+
+
+    def auto_assign_section(self):
+        """Developer tool to trigger auto-assignment of paramedics."""
+        st.header("Auto-Assign Tester")
+        st.info("Trigger the auto-assignment algorithm for paramedics (RS) for a specific month and year.")
+        
+        now = datetime.datetime.now()
+        col1, col2 = st.columns(2)
+        with col1:
+            month = st.number_input("Assign Month", min_value=1, max_value=12, value=now.month, step=1, key="aa_test_month")
+        with col2:
+            year = st.number_input("Assign Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="aa_test_year")
+            
+        if st.button("Auto-Assign Paramedics (RS)"):
+            success, message = self.schedule_manager.assign_paramedics_to_shifts(month, year)
+            if success:
+                st.success(message)
+            else:
+                st.error(message)
+
     def render_page(self):
         """Renders the developer tools page."""
         st.sidebar.title(f"Welcome, {st.session_state['username']}!")
@@ -76,6 +123,10 @@ class DeveloperPage:
         with col1:
             with st.container(border=True):
                 self.add_constraint_section()
+            with st.container(border=True):
+                self.dataholder_test_section()
+            with st.container(border=True):
+                self.auto_assign_section()
         with col2:
             with st.container(border=True):
                 self.bulk_upload_section()
