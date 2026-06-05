@@ -45,6 +45,8 @@ class Assignment(Base):
     date = Column(Date, nullable=False, index=True)
     shift_id = Column(Integer, ForeignKey('shifts.id'), nullable=False)
     employee_id = Column(Integer, ForeignKey('employees.id'), nullable=True)
+    role = Column(String, nullable=False)
+    is_holidays = Column(Boolean, nullable=False)
 
     # Hidden attributes that all assignment objects have
     employee = relationship('Employee', back_populates='assignments') 

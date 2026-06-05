@@ -427,14 +427,16 @@ class DatabaseAccess:
             return []
 
 
-    def insert_empty_assignment(self, date, shift_id, employee_id=None):
+    def insert_empty_assignment(self, date, shift_id, role, is_holidays, employee_id=None):
         """Inserts a single assignment record into the database."""
         try:
             with self.db.get_session() as session:
                 new_assignment = Assignment(
                     date=date,
                     shift_id=shift_id,
-                    employee_id=employee_id
+                    employee_id=employee_id,
+                    role=role,
+                    is_holidays=is_holidays
                 )
                 session.add(new_assignment)
             return True
@@ -494,4 +496,22 @@ class DatabaseAccess:
                 return session.query(Assignment).filter(Assignment.date == target_date).first() is not None
         except Exception as e:
             print(f"Error checking assignment on date: {e}")
+            return False
+
+
+    def update_monthly_assignments(self, updates_list):
+        """Updates assignments based on a flattened list of changes."""
+        try:
+            with self.db.get_session() as session:
+                for update in updates_list:
+                    assignment = session.query(Assignment).filter(
+                        Assignment.date == update['date'],
+                        Assignment.shift_id == update['shift_id'],
+                        Assignment.role == update['role']
+                    ).first()
+                    if assignment:
+                        assignment.employee_id = update['employee_id']
+            return True
+        except Exception as e:
+            print(f"Error updating monthly assignments: {e}")
             return False

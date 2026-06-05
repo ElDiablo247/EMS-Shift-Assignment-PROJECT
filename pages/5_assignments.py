@@ -84,7 +84,40 @@ class AssignmentPage:
         if df.empty:
             st.warning(f"No assignments found for {view_month}/{view_year}.")
         else:
-            st.dataframe(df, use_container_width=True, hide_index=True)
+            # 1. Prepare options for the dropdowns
+            employees_df = self.staff_manager.get_all_employees()
+            employee_names = employees_df['name'].tolist() if not employees_df.empty else []
+            employee_names.insert(0, "Empty")
+            employee_names.append("-") 
+
+            # 2. Build the Column Configuration dynamically
+            column_config = {
+                "date": st.column_config.TextColumn("Date", disabled=True)
+            }
+            
+            for col in df.columns:
+                if col != "date":
+                    column_config[col] = st.column_config.SelectboxColumn(col, options=employee_names, required=True)
+            
+            # 3. Render the interactive table
+            with st.form("assignments_editor_form"):
+                edited_df = st.data_editor(
+                    df, 
+                    column_config=column_config, 
+                    use_container_width=True, 
+                    hide_index=True, 
+                    height=1200,
+                    key="monthly_assignments_editor"
+                )
+                
+                if st.form_submit_button("Save Schedule"):
+                    success, message = self.schedule_manager.save_edited_assignments(edited_df)
+                    if success:
+                        st.success(message)
+                        time.sleep(1.5)
+                        st.rerun()
+                    else:
+                        st.error("Failed to save schedule changes.")
 
 
     def render_page(self):

@@ -19,7 +19,7 @@ class EmployeePage:
 
         name = st.text_input("Name")
         date_of_birth = st.date_input("Date of Birth", value=max_date, min_value=min_date, max_value=max_date, format="DD/MM/YYYY")
-        qualification = st.selectbox("Role", ["Paramedic", "Assistant"])
+        qualification = st.selectbox("Role", ["RS", "RH"])
         contract_type = st.selectbox("Contract Type", ["100%", "75%", "50%", "Flexible"])
         
         if st.button("Add to System"):
@@ -72,7 +72,7 @@ class EmployeePage:
             "id": st.column_config.NumberColumn("ID"),
             "name": st.column_config.TextColumn("Name"),
             "date_of_birth": st.column_config.DateColumn("Date of Birth", format="DD/MM/YYYY", required=True),
-            "qualification": st.column_config.SelectboxColumn("Role", options=["Paramedic", "Assistant"], required=True),
+            "qualification": st.column_config.SelectboxColumn("Role", options=["RS", "RH"], required=True),
             "contract_type": st.column_config.SelectboxColumn("Contract Type", options=["100%", "75%", "50%", "Flexible"], required=True),
             "is_active": st.column_config.CheckboxColumn("Active", required=True)
         }

@@ -14,22 +14,22 @@ class Developer:
         """Populates the database with staff members."""
         
         staff_data = [
-            {"name": "Tom Holland", "date_of_birth": "1996-06-01", "qualification": "Paramedic", "contract_type": "100%", "is_active": True},
-            {"name": "Raul Birta", "date_of_birth": "1992-03-15", "qualification": "Assistant", "contract_type": "75%", "is_active": True},
-            {"name": "Sarah Jenkins", "date_of_birth": "1988-11-20", "qualification": "Paramedic", "contract_type": "Flexible", "is_active": True},
-            {"name": "Michael Chen", "date_of_birth": "1994-07-12", "qualification": "Assistant", "contract_type": "100%", "is_active": True},
-            {"name": "Elena Rodriguez", "date_of_birth": "1991-01-30", "qualification": "Paramedic", "contract_type": "75%", "is_active": True},
-            {"name": "James Wilson", "date_of_birth": "1985-09-05", "qualification": "Assistant", "contract_type": "50%", "is_active": True},
-            {"name": "Amina Yusuf", "date_of_birth": "1997-04-22", "qualification": "Paramedic", "contract_type": "100%", "is_active": True},
-            {"name": "David Thompson", "date_of_birth": "1990-12-10", "qualification": "Assistant", "contract_type": "100%", "is_active": True},
-            {"name": "Lucia Rossi", "date_of_birth": "1993-02-28", "qualification": "Paramedic", "contract_type": "75%", "is_active": True},
-            {"name": "Kevin O'Sullivan", "date_of_birth": "1989-08-14", "qualification": "Assistant", "contract_type": "Flexible", "is_active": True},
-            {"name": "Sophie Martin", "date_of_birth": "1995-10-03", "qualification": "Paramedic", "contract_type": "100%", "is_active": True},
-            {"name": "Ahmed Al-Farsi", "date_of_birth": "1994-05-18", "qualification": "Assistant", "contract_type": "75%", "is_active": True},
-            {"name": "Emma Watson", "date_of_birth": "1990-04-15", "qualification": "Paramedic", "contract_type": "Flexible", "is_active": True},
-            {"name": "Liam Gallagher", "date_of_birth": "1972-09-21", "qualification": "Assistant", "contract_type": "100%", "is_active": True},
-            {"name": "Chloe Bennett", "date_of_birth": "1992-04-18", "qualification": "Paramedic", "contract_type": "50%", "is_active": True},
-            {"name": "Raaaa", "date_of_birth": "1997-12-29", "qualification": "Paramedic", "contract_type": "100%", "is_active": True}
+            {"name": "Tom Holland", "date_of_birth": "1996-06-01", "qualification": "RS", "contract_type": "100%", "is_active": True},
+            {"name": "Raul Birta", "date_of_birth": "1992-03-15", "qualification": "RH", "contract_type": "75%", "is_active": True},
+            {"name": "Sarah Jenkins", "date_of_birth": "1988-11-20", "qualification": "RS", "contract_type": "Flexible", "is_active": True},
+            {"name": "Michael Chen", "date_of_birth": "1994-07-12", "qualification": "RH", "contract_type": "100%", "is_active": True},
+            {"name": "Elena Rodriguez", "date_of_birth": "1991-01-30", "qualification": "RS", "contract_type": "75%", "is_active": True},
+            {"name": "James Wilson", "date_of_birth": "1985-09-05", "qualification": "RH", "contract_type": "50%", "is_active": True},
+            {"name": "Amina Yusuf", "date_of_birth": "1997-04-22", "qualification": "RS", "contract_type": "100%", "is_active": True},
+            {"name": "David Thompson", "date_of_birth": "1990-12-10", "qualification": "RH", "contract_type": "100%", "is_active": True},
+            {"name": "Lucia Rossi", "date_of_birth": "1993-02-28", "qualification": "RS", "contract_type": "75%", "is_active": True},
+            {"name": "Kevin O'Sullivan", "date_of_birth": "1989-08-14", "qualification": "RH", "contract_type": "Flexible", "is_active": True},
+            {"name": "Sophie Martin", "date_of_birth": "1995-10-03", "qualification": "RS", "contract_type": "100%", "is_active": True},
+            {"name": "Ahmed Al-Farsi", "date_of_birth": "1994-05-18", "qualification": "RH", "contract_type": "75%", "is_active": True},
+            {"name": "Emma Watson", "date_of_birth": "1990-04-15", "qualification": "RS", "contract_type": "Flexible", "is_active": True},
+            {"name": "Liam Gallagher", "date_of_birth": "1972-09-21", "qualification": "RH", "contract_type": "100%", "is_active": True},
+            {"name": "Chloe Bennett", "date_of_birth": "1992-04-18", "qualification": "RS", "contract_type": "50%", "is_active": True},
+            {"name": "Raaaa", "date_of_birth": "1997-12-29", "qualification": "RS", "contract_type": "100%", "is_active": True}
         ]
 
         for person in staff_data:
@@ -39,7 +39,7 @@ class Developer:
                 new_id = last_id + 1
             else:
                 new_id = 6001  # Starting ID for employees if database is empty
-            dob_obj = datetime.strptime(person["date_of_birth"], "%Y-%m-%d").date() # Convert string DOB to date object for the staff_manager function
+            dob_obj = datetime.strptime(person["date_of_birth"], "%Y-%m-%d").date() # Convert string DOB to date object 
             self.dao.add_employee(
                 emp_id=new_id, 
                 name=person["name"], 

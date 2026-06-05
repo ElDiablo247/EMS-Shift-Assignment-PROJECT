@@ -3,6 +3,7 @@ import pandas as pd
 import calendar
 import holidays
 import datetime
+from logic.temporary_data import DataHolder
 
 
 class ScheduleManager:
@@ -30,9 +31,8 @@ class ScheduleManager:
         shift_map = dict(zip(shifts_df['shift_name'], shifts_df['id'])) # Key: shift_name, Value: shift_id
 
         # 4. Iterate through the dates, determine their type, and create 2 empty assignments per shift
-        self.generate_empty_template(month_dates, year, shift_map)
-        
-        return True, f"Successfully generated empty template for {month}/{year}!"
+        success, msg = self.generate_empty_template(month_dates, year, shift_map)
+        return success, msg
 
 
     def generate_empty_template(self, month_dates, year, shift_map):
@@ -43,25 +43,32 @@ class ScheduleManager:
 
         for date in month_dates:
             date_type = self.get_date_type(date, year)
+            is_holiday = (date_type == "Holiday")
             required_shifts = shifts_per_day_dict.get(date_type, [])
 
-            for shift in required_shifts:
-                self.append_empty_assignment(date, shift, None, shift_map, assignments_to_insert)
-                self.append_empty_assignment(date, shift, None, shift_map, assignments_to_insert)
+            for shift_name in required_shifts:
+                self.append_empty_assignment(date, shift_name, None, "RS", is_holiday, shift_map, assignments_to_insert)
+                self.append_empty_assignment(date, shift_name, None, "RH", is_holiday, shift_map, assignments_to_insert)
         
         # Once all loops are done, send the massive list to the database in one single query
         if assignments_to_insert:
-            self.dao.bulk_insert_assignments(assignments_to_insert)
+            if self.dao.bulk_insert_assignments(assignments_to_insert):
+                return True, f"Successfully generated {len(assignments_to_insert)} assignment slots for {month_dates[0].month}/{year}!"
+            return False, "A database error occurred while saving the assignments."
+        else:
+            return False, "No slots created. Please go to the 'Constraints' page and assign shifts to the days of the week."
 
 
-    def append_empty_assignment(self, date, shift_name, employee_id, shift_map, assignments_list):
+    def append_empty_assignment(self, date, shift_name, employee_id, role, is_holidays, shift_map, assignments_list):
         """Translates shift_name to shift_id and appends the assignment dictionary to a list."""
         shift_id = shift_map.get(shift_name)
         if shift_id:
             assignments_list.append({
                 "date": date,
                 "shift_id": shift_id,
-                "employee_id": employee_id
+                "employee_id": employee_id,
+                "role": role,
+                "is_holidays": is_holidays
             })
         else:
             print(f"Warning: Shift name '{shift_name}' not found in database.")
@@ -123,27 +130,72 @@ class ScheduleManager:
         # Map employee_id to employee name
         emp_name_map = dict(zip(employees_df['id'], employees_df['name']))
         df['employee_name'] = df['employee_id'].map(emp_name_map)
-
-        # Differentiate between the 2 identical shift assignments (Paramedic vs Assistant)
-        df['slot'] = df.groupby(['date', 'shift_name']).cumcount()
-        role_map = {0: 'RS', 1: 'RH'}
-        df['shift_role'] = df['shift_name'] + ' (' + df['slot'].map(role_map).fillna(df['slot'].astype(str)) + ')'
         
         # Format date so the pivot column headers look nice
         df['date'] = pd.to_datetime(df['date']).dt.strftime('%d.%m.%Y')
         
-        # Replace NaN with 'Unassigned' ONLY for slots that actually exist in the DB
+        # Replace NaN with 'Empty' ONLY for slots that actually exist in the DB
         df['employee_name'] = df['employee_name'].fillna("Empty")
         
-        # Pivot: index=shift_role, columns=date, values=employee_name
-        pivot_df = df.pivot(index='shift_role', columns='date', values='employee_name')
+        # Combine shift and role to create the column headers (e.g., "K1 - RS")
+        df['shift_role'] = df['shift_name'] + ' - ' + df['role']
+        
+        # Pivot: rows = dates, columns = shift_role, values = employee_name
+        pivot_df = df.pivot(index='date', columns='shift_role', values='employee_name')
         
         # Replace NaN with '-' for cells created by the pivot (shifts that don't run that day)
         pivot_df = pivot_df.fillna("-")
         
-        # Reset index to make 'shift_role' a standard column, and rename it for the UI
+        # Reset index to make date a standard column
         pivot_df = pivot_df.reset_index()
-        pivot_df = pivot_df.rename(columns={'shift_role': 'Shift'})
         pivot_df.columns.name = None
         
         return pivot_df
+
+
+    def load_data_for_assignment(self, month, year):
+        """Fetches assignments, employees, and shifts for a given month/year and returns an initialized DataHolder."""
+        assignments_df = self.dao.get_assignments_for_month(month, year)
+        employees_df = self.dao.get_all_employees()
+        shifts_df = self.dao.get_all_shifts()
+        
+        return DataHolder(month, year, assignments_df, employees_df, shifts_df)
+
+
+    def save_edited_assignments(self, edited_df):
+        """Translates the edited UI grid back into database updates (un-pivot)."""
+        
+        # Fetch employees to map names back to IDs
+        employees_df = self.dao.get_all_employees()
+        emp_name_to_id = dict(zip(employees_df['name'], employees_df['id']))
+        emp_name_to_id['Empty'] = None
+        
+        # Fetch shifts to map shift_name back to shift_id
+        shifts_df = self.dao.get_all_shifts()
+        shift_name_to_id = dict(zip(shifts_df['shift_name'], shifts_df['id']))
+        
+        # Melt the dataframe (un-pivot)
+        shift_role_columns = [col for col in edited_df.columns if col != 'date']
+        melted_df = edited_df.melt(id_vars=['date'], value_vars=shift_role_columns, var_name='shift_role_str', value_name='employee_name')
+        
+        # Filter out cells that were filled with "-" (Days where a specific shift doesn't run)
+        melted_df = melted_df[melted_df['employee_name'] != '-']
+        
+        updates_list = []
+        for _, row in melted_df.iterrows():
+            # Split the column header back into shift name and role
+            shift_name, role = row['shift_role_str'].split(' - ')
+            
+            # Convert date string back to actual date object
+            date_obj = datetime.datetime.strptime(row['date'], '%d.%m.%Y').date()
+            shift_id = shift_name_to_id.get(shift_name)
+            
+            if shift_id:
+                updates_list.append({
+                    'date': date_obj,
+                    'shift_id': shift_id,
+                    'role': role,
+                    'employee_id': emp_name_to_id.get(row['employee_name'])
+                })
+                
+        return self.dao.update_monthly_assignments(updates_list), "Schedule saved successfully!"
