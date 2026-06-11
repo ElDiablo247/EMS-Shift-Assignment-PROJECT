@@ -127,7 +127,7 @@ class DatabaseAccess:
             return False
 
 
-    def add_shift(self, shift_id, shift_name, shift_start, shift_end, shift_duration):
+    def add_shift(self, shift_id, shift_name, shift_start, shift_end, shift_duration, runs_on_weekend_or_holiday):
         """
         Creates a new shift object and saves it to the database.
         """
@@ -139,7 +139,8 @@ class DatabaseAccess:
                     shift_name=shift_name,
                     shift_start=shift_start,
                     shift_end=shift_end,
-                    shift_duration=shift_duration
+                    shift_duration=shift_duration,
+                    runs_on_weekend_or_holiday=runs_on_weekend_or_holiday
                 )
                 session.add(new_shift)
             return True
@@ -262,6 +263,7 @@ class DatabaseAccess:
                             shift.shift_start = row['shift_start']
                             shift.shift_end = row['shift_end']
                             shift.shift_duration = row['shift_duration']
+                            shift.runs_on_weekend_or_holiday = row['runs_on_weekend_or_holiday']
                             shift.is_active = row['is_active']
             return True
         except Exception as e:
@@ -276,7 +278,7 @@ class DatabaseAccess:
         """
         try:
             with self.db.get_session() as session:
-                # bulk_insert_mappings is incredibly fast and takes your list of dicts directly!
+                # bulk_insert_mappings is used to bulk add the constrint dictionaries to the database, which is more efficient than adding them one by one.
                 session.bulk_insert_mappings(Constraint, constraints_list)
             return True
         except Exception as e:
@@ -289,23 +291,6 @@ class DatabaseAccess:
         with self.db.get_session() as session:
             query = session.query(Constraint).order_by(Constraint.id)
             return pd.read_sql(query.statement, session.bind)
-
-
-    def update_multiple_constraints(self, constraints_df):
-        """
-        Updates constraint records based on the edited DataFrame from the UI.
-        """
-        try:
-            with self.db.get_session() as session:
-                for _, row in constraints_df.iterrows():
-                    if pd.notna(row['id']):
-                        constraint = session.query(Constraint).filter(Constraint.id == row['id']).first()
-                        if constraint:
-                            constraint.constraint_value = row['constraint_value']
-            return True
-        except Exception as e:
-            print(f"Error updating constraints: {e}")
-            return False
 
 
     def update_single_constraint(self, category, key, new_value):

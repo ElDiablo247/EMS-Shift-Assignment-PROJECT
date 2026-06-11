@@ -44,14 +44,6 @@ class Homepage:
                     st.success(message)
                     st.info("Registration successful. Please log in with your new credentials.")
                     time.sleep(1.5)
-
-                    success2, message2 = self.constraint_manager.populate_constraints()
-                    if success2:
-                        st.success(message2)
-                        time.sleep(1.5)
-                    else:
-                        st.error(message2)
-                    st.rerun()
                 else:
                     st.error(message)
 

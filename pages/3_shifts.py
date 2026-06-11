@@ -17,9 +17,10 @@ class ShiftPage:
         start = st.time_input("Start Time", value=None)
         end = st.time_input("End Time", value=None)
         duration = st.number_input("Duration (hours)", value=8.0, max_value=12.0, step=0.5)
+        runs_on_weekend_or_holiday = st.checkbox("Runs on Weekends/Holidays")
         
         if st.button("Add Shift"):
-            success, message = self.shift_manager.add_shift(name, start, end, duration)
+            success, message = self.shift_manager.add_shift(name, start, end, duration, runs_on_weekend_or_holiday)
             if success:
                 st.success(message)
                 time.sleep(1.5)
@@ -70,6 +71,7 @@ class ShiftPage:
             "shift_start": st.column_config.TimeColumn("Start Time", format="HH:mm"),
             "shift_end": st.column_config.TimeColumn("End Time", format="HH:mm"),
             "shift_duration": st.column_config.NumberColumn("Duration minus breaks(hrs)"),
+            "runs_on_weekend_or_holiday": st.column_config.CheckboxColumn("Weekend/Holiday", required=True),
             "is_active": st.column_config.CheckboxColumn("Active", required=True)
         }
         

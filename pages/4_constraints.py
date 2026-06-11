@@ -17,6 +17,16 @@ class ConstraintsPage:
         """Displays a read-only overview of all system constraints."""
         st.header("Configuration Overview")
         st.info("Current active rules for the system.")
+
+        if st.button("Create Default Constraints"):
+            success, message = self.constraint_manager.populate_constraints()
+            if success:
+                st.success(message)
+                time.sleep(1.5)
+            else:
+                st.error(message)
+                time.sleep(1.5)
+
         df = self.constraint_manager.get_all_constraints()
         
         if not df.empty:
@@ -36,62 +46,28 @@ class ConstraintsPage:
             )
 
 
-    def shifts_per_day_section(self):
-        """Section for assigning which shifts are available on which days using a multiselect table."""
-        st.header("Shifts Per Day Configuration")
-        st.info("Select the shifts that should run on each day category.")
-        
-        # 1. Fetch the shifts per day constraints from the database and the shift names, with the help of the manager.
-        shifts_df = self.constraint_manager.get_shifts_per_day_constraints()
-        available_shifts = self.shift_manager.return_shift_names()
-        
-        # 2. Configure the data_editor columns
-        column_config = {
-            "id": None,  # Hide ID
-            "category": None, # Hide category
-            "constraint_key": st.column_config.TextColumn("Day", disabled=True),
-            "description": st.column_config.TextColumn("Description", disabled=True),
-            "constraint_value": st.column_config.MultiselectColumn(
-                "Assigned Shifts",
-                options=available_shifts,
-                help="Select all shifts that apply to this day"
-            )
-        }
-        
-        # Wrap the editor and button in a form 
-        with st.form("shifts_per_day_form"):
-            edited_df = st.data_editor(
-                shifts_df,
-                column_config=column_config,
-                hide_index=True,
-                use_container_width=True,
-                key="shifts_per_day_editor"
-            )
-            
-            # 4. Save Changes
-            if st.form_submit_button("Save Constraints"):
-                success, message = self.constraint_manager.update_multiple_constraints(edited_df)
-                if success:
-                    st.success(message)
-                    time.sleep(1.5)
-                    st.rerun()
-                else:
-                    st.error(message)
-
-
     def contract_constraints_section(self):
         """Section for configuring the baseline full-time hours."""
         st.header("Contract Hours Baseline")
         st.info("Define the standard hours per week for a 100% Full-Time contract.")
 
+        options = [35.0, 35.5, 36.0, 36.5, 37.0, 37.5, 38.0, 38.5, 39.0, 39.5, 40.0, 40.5, 41.0, 41.5, 42.0, 42.5]
         selected_hours = st.selectbox(
             "Select Full-Time Hours per Week",
-            options=[37.5, 40.0, 42.5]
+            options=options,
+            index=options.index(40.0)
         )
         if st.button("Save Contract Hours"):
-            success, message = self.constraint_manager.update_single_constraint("Contract hours", "Full-time", selected_hours)
+            success, message = self.constraint_manager.update_single_constraint("Contract hours", "Full-time 100%", selected_hours)
             if success:
                 st.success(message)
+                
+                pt_success, pt_message = self.constraint_manager.update_parttime_contract_constraints(selected_hours)
+                if pt_success:
+                    st.success(pt_message)
+                else:
+                    st.error(pt_message)
+                    
                 time.sleep(1.5)
                 st.rerun()
             else:
@@ -126,17 +102,17 @@ class ConstraintsPage:
                 del st.session_state[key]
             st.rerun()
 
-        with st.container(border=True):
-            self.overview_section()
-
-        with st.container(border=True):
-            tab1, tab2, tab3 = st.tabs(["Shifts per Day Rules", "Full-time Contract Rules", "Holiday Rules"])
-            with tab1:
-                self.shifts_per_day_section()
-            with tab2:
-                self.contract_constraints_section()
-            with tab3:
-                self.holidays_constraint_section()
+        col1, col2 = st.columns([2, 2], gap="small")
+        with col1:
+            with st.container(border=True):
+                self.overview_section()
+        has_constraints = not self.constraint_manager.get_all_constraints().empty
+        with col2:
+            if has_constraints:
+                with st.container(border=True):
+                    self.contract_constraints_section()
+                    st.divider()
+                    self.holidays_constraint_section()
 
 
 if __name__ == "__main__":

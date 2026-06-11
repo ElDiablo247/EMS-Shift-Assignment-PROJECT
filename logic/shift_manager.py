@@ -7,7 +7,7 @@ class ShiftManager:
         self.dao = DatabaseAccess()
 
 
-    def add_shift(self, shift_name, shift_start, shift_end, shift_duration):
+    def add_shift(self, shift_name, shift_start, shift_end, shift_duration, runs_on_weekend_or_holiday):
         """
         Validates input, generates an ID, and calls DAO to save shift.
         """
@@ -20,7 +20,7 @@ class ShiftManager:
             new_id = last_id + 1
         else:
             new_id = 101  # Starting ID for shifts if database is empty
-        success = self.dao.add_shift(new_id, shift_name, shift_start, shift_end, shift_duration)
+        success = self.dao.add_shift(new_id, shift_name, shift_start, shift_end, shift_duration, runs_on_weekend_or_holiday)
         if success:
             return True, "Shift added successfully."
         else:

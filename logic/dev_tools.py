@@ -53,12 +53,12 @@ class Developer:
     def dev_upload_bulk_shifts(self):
         """Populates the shifts table with a predefined set of shifts. This is a one-click solution to quickly set up the system with shifts."""
         shifts = [
-            {"name": "K1", "start": "06:30", "end": "15:00", "duration": 8},
-            {"name": "K2", "start": "06:30", "end": "15:00", "duration": 8},
-            {"name": "K4", "start": "15:00", "end": "23:30", "duration": 8},
-            {"name": "K5", "start": "15:00", "end": "23:30", "duration": 8},
-            {"name": "K3", "start": "07:30", "end": "16:00", "duration": 8},
-            {"name": "K6", "start": "21:00", "end": "05:30", "duration": 8}
+            {"name": "K1", "start": "06:30", "end": "15:00", "duration": 8, "runs_on_weekend_or_holiday": True},
+            {"name": "K2", "start": "06:30", "end": "15:00", "duration": 8, "runs_on_weekend_or_holiday": False},
+            {"name": "K4", "start": "15:00", "end": "23:30", "duration": 8, "runs_on_weekend_or_holiday": False},
+            {"name": "K5", "start": "15:00", "end": "23:30", "duration": 8, "runs_on_weekend_or_holiday": False},
+            {"name": "K3", "start": "07:30", "end": "16:00", "duration": 8, "runs_on_weekend_or_holiday": False},
+            {"name": "K6", "start": "21:00", "end": "05:30", "duration": 8, "runs_on_weekend_or_holiday": False}
         ]
         for shift in shifts:
             last_id = self.dao.get_last_shift_id()
@@ -68,7 +68,7 @@ class Developer:
                 new_id = 101  # Starting ID for shifts if database is empty
             start_time = datetime.strptime(shift["start"], "%H:%M").time()
             end_time = datetime.strptime(shift["end"], "%H:%M").time()
-            self.dao.add_shift(new_id, shift["name"], start_time, end_time, shift["duration"])
+            self.dao.add_shift(new_id, shift["name"], start_time, end_time, shift["duration"], shift["runs_on_weekend_or_holiday"])
         return True, "Bulk shifts populated successfully."
 
 

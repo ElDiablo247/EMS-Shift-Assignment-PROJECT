@@ -25,6 +25,7 @@ class Shift(Base):
     shift_start = Column(Time, nullable=False) 
     shift_end = Column(Time, nullable=False) 
     shift_duration = Column(Float, nullable=False)
+    runs_on_weekend_or_holiday = Column(Boolean, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
     assignments = relationship('Assignment', back_populates='shift') # Hidden attribute that all shift objects have
 
@@ -59,7 +60,7 @@ class Constraint(Base):
     id = Column(Integer, primary_key=True)
     category = Column(String, nullable=False)
     constraint_key = Column(String, nullable=False)    
-    constraint_value = Column(JSON, nullable=True)
+    constraint_value = Column(String, nullable=True)
     description = Column(String, nullable=False)
 
 
