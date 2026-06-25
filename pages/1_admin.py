@@ -53,7 +53,7 @@ class AdminPage:
     def delete_admin_section(self):
         st.header("Delete Admin Account")
         with st.form("delete_admin_form", clear_on_submit=True):
-            id_to_delete = st.number_input("Admin ID", value=None, placeholder="Enter the ID of the admin to delete. 1 is not deletable.")
+            id_to_delete = st.number_input("Admin ID", value=None, placeholder="Admin ID to delete")
             submitted = st.form_submit_button("Delete Admin")
             if submitted:
                 if id_to_delete == 1:
@@ -70,28 +70,16 @@ class AdminPage:
 
 
     def render_page(self):
-        st.sidebar.title(f"Welcome, {st.session_state['username']}!")
-        
-        st.sidebar.markdown("---")
-        if st.sidebar.button("Refresh Data"):
-            st.rerun()
-        if st.sidebar.button("Logout"):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
-
-        # 2-Column Vertical Layout Construction
-        col_left, col_right = st.columns(2, gap="large")
-        
-        with col_left:
-            with st.container(border=True):
+        # Sidebar: Action widgets with expanders
+        with st.sidebar:
+            with st.expander("Register Admin", expanded=True):
                 self.register_admin_section()
-            with st.container(border=True):
+            with st.expander("Delete Admin", expanded=False):
                 self.delete_admin_section()
-                
-        with col_right:
-            with st.container(border=True):
-                self.display_admins_table()
+        
+        # Main area: Display only 
+        with st.container(border=True):
+            self.display_admins_table()
 
 
 if __name__ == "__main__":

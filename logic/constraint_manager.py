@@ -1,4 +1,5 @@
 from repository.dao import DatabaseAccess
+import holidays
 
 
 class ConstraintManager:
@@ -96,3 +97,27 @@ class ConstraintManager:
             return True, "Part-time contract constraints updated successfully."
         else:
             return False, "Failed to update Part-time 50% and 75% constraints."
+
+
+    def generate_year_holidays(self, year):
+        """Generates a list of holidays for the given year."""
+        region = self.dao.get_single_constraint("Holidays", "Region")
+        if not region:
+            return False, "Holiday region not set. Please set the holiday region in the constraints before generating the holidays."
+
+        ger_holidays = holidays.Germany(years=year, prov=region)
+
+        success_count = 0
+        for date, name in ger_holidays.items():
+            if self.dao.insert_holiday(year, date, name):
+                success_count += 1
+                
+        if success_count > 0:
+            return True, f"{success_count} holidays added successfully for {year} and region {region}."
+        return False, f"Failed to add holidays for {year}. Check if they already exist."
+
+
+    def get_all_holidays_df(self, year):
+        """Fetches all holidays for a given year and returns them as a DataFrame."""
+        holidays_df = self.dao.get_all_holidays(year)
+        return holidays_df

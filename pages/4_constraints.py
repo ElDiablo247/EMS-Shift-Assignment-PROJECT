@@ -3,6 +3,7 @@ from logic.auth_utils import ensure_authenticated
 from logic.constraint_manager import ConstraintManager
 from logic.shift_manager import ShiftManager
 import pandas as pd
+import datetime
 import time
 
 
@@ -13,24 +14,26 @@ class ConstraintsPage:
         self.shift_manager = ShiftManager()
 
 
-    def overview_section(self):
-        """Displays a read-only overview of all system constraints."""
-        st.header("Configuration Overview")
-        st.info("Current active rules for the system.")
-
+    def create_defaults_section(self):
+        st.info("Populate the system with default constraint values.")
         if st.button("Create Default Constraints"):
             success, message = self.constraint_manager.populate_constraints()
             if success:
                 st.success(message)
-                time.sleep(1.5)
             else:
                 st.error(message)
-                time.sleep(1.5)
+            time.sleep(1.5)
+            st.rerun()
+
+
+    def overview_section(self):
+        """Displays a read-only overview of all system constraints."""
+        st.header("Constraints Overview")
+        st.info("Current active rules for the system.")
 
         df = self.constraint_manager.get_all_constraints()
         
         if not df.empty:
-            # Convert the constraint_value column to strings
             df['constraint_value'] = df['constraint_value'].astype(str)
             st.dataframe(
                 df,
@@ -74,7 +77,7 @@ class ConstraintsPage:
                 st.error(message)
 
 
-    def holidays_constraint_section(self):
+    def holidays_region_section(self):
         """Section for managing the permanent holiday region."""
         st.header("Holiday Management")
         st.info("Select the German state the company operates in.")
@@ -90,30 +93,54 @@ class ConstraintsPage:
                 st.error(message)
 
 
+    def generate_holidays_section(self):
+        st.info("Generate the public holidays for a specific year.")
+        year_for_holidays = st.number_input("Year", min_value=datetime.datetime.now().year - 1, max_value=2130, value=datetime.datetime.now().year, step=1, key="holiday_year")
+        if st.button("Generate Holidays"):
+            success, message = self.constraint_manager.generate_year_holidays(year_for_holidays)
+            if success:
+                st.success(message)
+                time.sleep(1.5)
+                st.rerun()
+            else:
+                st.error(message)
+
+
+    def display_holidays_section(self):
+        """Displays the contents of the holidays table."""
+        st.header("Holidays Overview")
+        
+        now = datetime.datetime.now()
+        view_year = st.number_input("View Holidays for Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="holiday_view_year")
+        
+        holidays_df = self.constraint_manager.get_all_holidays_df(year=view_year)
+        if holidays_df.empty:
+            st.warning(f"No holidays found for {view_year}. Use the 'Generate Holidays' tool.")
+        else:
+            st.dataframe(holidays_df, use_container_width=True, hide_index=True)
+
+
     def render_page(self):
         """Renders the constraints page layout."""
-        st.sidebar.title(f"Welcome, {st.session_state.get('username', 'User')}!")
+        # Sidebar: Action widgets with expanders
+        with st.sidebar:
+            with st.expander("Create Defaults", expanded=False):
+                self.create_defaults_section()
+            with st.expander("Contract Hours", expanded=False):
+                self.contract_constraints_section()
+            with st.expander("Holiday Region", expanded=False):
+                self.holidays_region_section()
+            with st.expander("Generate Holidays", expanded=False):
+                self.generate_holidays_section()
         
-        st.sidebar.markdown("---")
-        if st.sidebar.button("Refresh Data"):
-            st.rerun()
-        if st.sidebar.button("Logout"):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
-
-        col1, col2 = st.columns([2, 2], gap="small")
+        # Main area: 50-50 constraints table and holidays table
+        col1, col2 = st.columns(2, gap="large")
         with col1:
             with st.container(border=True):
                 self.overview_section()
-        has_constraints = not self.constraint_manager.get_all_constraints().empty
         with col2:
-            if has_constraints:
-                with st.container(border=True):
-                    self.contract_constraints_section()
-                    st.divider()
-                    self.holidays_constraint_section()
-
+            with st.container(border=True):
+                self.display_holidays_section()
 
 if __name__ == "__main__":
     page = ConstraintsPage()

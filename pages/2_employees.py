@@ -36,7 +36,7 @@ class EmployeePage:
         """Section for deleting employees from the Database. This will only be used during development and will not be made available to users."""
         st.header("Delete Employee")
         with st.form("delete_employee_form", clear_on_submit=True):
-            id_to_delete = st.number_input("Employee ID", value=None, placeholder="Enter the ID of the employee to delete.")
+            id_to_delete = st.number_input("Employee ID", value=None, placeholder="Employee ID to delete")
             submitted = st.form_submit_button("Delete Employee")
             if submitted:
                 if st.session_state.get('role') == 'basic':
@@ -97,25 +97,16 @@ class EmployeePage:
 
     def render_page(self):
         """Renders the employee management page."""
-        st.sidebar.title(f"Welcome, {st.session_state['username']}!")
-        
-        st.sidebar.markdown("---")
-        if st.sidebar.button("Refresh Data"):
-            st.rerun()
-        if st.sidebar.button("Logout"):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
-            
-        col1, col2 = st.columns([3, 7], gap="xlarge")
-        with col1:
-            with st.container(border=True):
+        # Sidebar: Action widgets with expanders
+        with st.sidebar:
+            with st.expander("Add Employee", expanded=True):
                 self.add_employee_section()
-            with st.container(border=True):
+            with st.expander("Delete Employee", expanded=False):
                 self.delete_employee_section()
-        with col2:
-            with st.container(border=True):
-                self.display_employee_table()
+        
+        # Main area: Display only 
+        with st.container(border=True):
+            self.display_employee_table()
 
 
 if __name__ == "__main__":

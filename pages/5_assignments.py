@@ -1,3 +1,5 @@
+from calendar import calendar
+
 import streamlit as st
 from logic.auth_utils import ensure_authenticated
 from logic.schedule_manager import ScheduleManager
@@ -13,64 +15,51 @@ class AssignmentPage:
         self.schedule_manager = ScheduleManager()
 
 
-    def generate_plan_section(self):
-        """Section for generating the holidays for a given year and the shift plan. Tabs are used to separate the two processes."""
-        st.header("Shift Schedule Generation")
-
-        tab1, tab2 = st.tabs(["1. Generate Holidays", "2. Generate Empty Template"])
-
-        with tab1:
-            st.subheader("Yearly Holiday Generation")
-            st.info("Generate the public holidays for a specific year. This must be done before generating a template.")
-            year_for_holidays = st.number_input("Year", min_value=datetime.datetime.now().year - 1, max_value=2130, value=datetime.datetime.now().year, step=1, key="holiday_year")
-            if st.button("Generate Holidays"):
-                success, message = self.schedule_manager.generate_year_holidays(year_for_holidays)
-                if success:
-                    st.success(message)
-                    time.sleep(1.5)
-                    st.rerun()
-                else:
-                    st.error(message)
-
-
-        with tab2:
-            st.subheader("Monthly Template Generation")
-            st.info("Select the month and year to generate the initial assignment template.")
-            now = datetime.datetime.now()
-            col1, col2 = st.columns(2)
-            with col1:
-                month = st.selectbox("Month", range(1, 13), index=now.month - 1)
-            with col2:
-                year = st.number_input("Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1)
-
-            if st.button("Generate Empty Template"):
-                success, message = self.schedule_manager.generate_template_data(month, year)
-                if success:
-                    st.success(message)
-                    time.sleep(1.5)
-                    st.rerun()
-                else:
-                    st.error(message)
-
-
-    def display_holidays_section(self):
-        """Displays the contents of the holidays table."""
-        st.header("Holidays Overview")
-        
+    def generate_empty_template_section(self):
+        st.info("Select the month and year to generate the initial empty assignment template.")
         now = datetime.datetime.now()
-        view_year = st.number_input("View Holidays for Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="holiday_view_year")
+        col_1, col_2 = st.columns(2)
+        with col_1:
+            month = st.selectbox("Month", range(1, 13), index=now.month - 1)
+        with col_2:
+            year = st.number_input("Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1)
+        if st.button("Generate"):
+            success, message, _ = self.schedule_manager.generate_empty_template(month, year)
+            if success:
+                st.success(message)
+                time.sleep(1.5)
+                st.rerun()
+            else:
+                st.error(message)
+                time.sleep(1.5)
+                st.rerun()
+
+
+    def auto_assign_section(self):
+        """Section for auto-assigning paramedics to shifts for a specific month and year."""
+        st.info("Trigger the auto-assignment algorithm for shifts that require paramedics in a specific month.")
+        now = datetime.datetime.now()
+        col_1, col_2 = st.columns(2)
+        with col_1:
+            a_month = st.number_input("Month", min_value=1, max_value=12, value=now.month, step=1, key="aa_month")
+        with col_2:
+            a_year = st.number_input("Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="aa_year")
         
-        holidays_df = self.schedule_manager.get_all_holidays_df(year=view_year)
-        if holidays_df.empty:
-            st.warning(f"No holidays found for {view_year}. Use the 'Generate Holidays' tool.")
-        else:
-            st.dataframe(holidays_df, use_container_width=True, hide_index=True)
+        if st.button("Assign"):
+            success, message = self.schedule_manager.assign_paramedics_to_weekdays_shifts(a_month, a_year)
+            if success:
+                st.success(message)
+                time.sleep(1.5)
+                st.rerun()
+            else:
+                st.error(message)
+                time.sleep(1.5)
+                st.rerun()
 
 
-    def display_assignments_section(self):
+    def display_schedule_section(self):
         """Section for displaying the generated shift assignments."""
         st.header("Current Assignments")
-        st.info("View the generated shift plan.")
         
         now = datetime.datetime.now()
         col1, col2 = st.columns(2)
@@ -78,6 +67,7 @@ class AssignmentPage:
             view_month = st.selectbox("View Month", range(1, 13), index=now.month - 1, key="view_month")
         with col2:
             view_year = st.number_input("View Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="view_year")
+        st.subheader(f"Showing: {view_month}/{view_year}")
 
         df = self.schedule_manager.get_assignments_pivot(view_month, view_year)
 
@@ -120,30 +110,61 @@ class AssignmentPage:
                         st.error("Failed to save schedule changes.")
 
 
+    def employee_hours_section(self):
+        """Display target and completed hours for all active employees."""
+        st.header("Employee Worktime Overview")
+        
+        now = datetime.datetime.now()
+        col1, col2, col3 = st.columns([1, 1, 3])
+        with col1:
+            view_month = st.selectbox("Month", range(1, 13), index=now.month - 1, key="eh_month")
+        with col2:
+            view_year = st.number_input("Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="eh_year")
+        with col3:
+            if st.button("Display", use_container_width=True, key="eh_display"):
+                st.subheader(f"Showing: {view_month}/{view_year}")
+                st.session_state["hours_target"] = (view_month, view_year)
+
+        target = st.session_state.get("hours_target")
+        if not target:
+            st.info("Select a month and year, then click Display.")
+            return
+        
+        target_month, target_year = target
+        df = self.schedule_manager.get_employee_hours_pivot(target_month, target_year)
+        
+        if df.empty:
+            st.warning("No employee data found.")
+        else:
+            st.data_editor(
+                df,
+                column_config={
+                    "Employee": st.column_config.TextColumn("Employee", disabled=True),
+                    "Target Hours": st.column_config.NumberColumn("Target Hours", disabled=True),
+                    "Completed Hours": st.column_config.NumberColumn("Completed Hours", disabled=True),
+                },
+                use_container_width=True,
+                hide_index=True,
+                key="employee_hours_editor"
+            )
+
+
     def render_page(self):
         """Renders the assignments management page."""
-        st.sidebar.title(f"Welcome, {st.session_state.get('username', 'User')}!")
+        with st.sidebar:
+            with st.expander("Generate Empty Template", expanded=True):
+                self.generate_empty_template_section()
+            with st.expander("Auto Assign Paramedics", expanded=True):
+                self.auto_assign_section()
         
-        st.sidebar.markdown("---")
-        if st.sidebar.button("Refresh Data"):
-            st.rerun()
-        if st.sidebar.button("Logout"):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
-
-        top_col1, top_col2 = st.columns([5, 5], gap="large")
-        with top_col1:
+        col1, col2 = st.columns([4, 2], gap="small")
+        with col1:
             with st.container(border=True):
-                self.generate_plan_section()
-        with top_col2:
+                self.display_schedule_section()
+        with col2:
+            # Main area: Assignments only
             with st.container(border=True):
-                self.display_holidays_section()
-
-        st.markdown("---")
-
-        with st.container(border=True):
-            self.display_assignments_section()
+                self.employee_hours_section()
 
 
 if __name__ == "__main__":

@@ -4,7 +4,7 @@ from logic.constraint_manager import ConstraintManager
 import time
 
 
-st.set_page_config(page_title="Shifts Planner for EMS", layout="wide")
+st.set_page_config(page_title="Schedule Generator and EMS management", layout="wide")
 
 
 class Homepage:
@@ -54,16 +54,29 @@ class Homepage:
             pages = []
             # Super admin gets the Control Panel added first
             if st.session_state.get("role") == "super":
-                pages.append(st.Page("pages/1_admin.py", title="Admin Control Panel"))
+                pages.append(st.Page("pages/1_admin.py", title="Admin Configuration"))
             
             # Both roles get these pages
-            pages.append(st.Page("pages/2_employees.py", title="Staff Management"))
-            pages.append(st.Page("pages/3_shifts.py", title="Shift Management"))
-            pages.append(st.Page("pages/4_constraints.py", title="Constraints Management"))
-            pages.append(st.Page("pages/5_assignments.py", title="Shift Schedule Panel"))
-            pages.append(st.Page("pages/9_developer.py", title="Developer Tools"))
+            pages.append(st.Page("pages/2_employees.py", title="EMS Staff Configuration"))
+            pages.append(st.Page("pages/3_shifts.py", title="Shifts Configuration"))
+            pages.append(st.Page("pages/4_constraints.py", title="Constraints Configuration"))
+            pages.append(st.Page("pages/5_assignments.py", title="Shift Scheduling"))
+            pages.append(st.Page("pages/9_developer.py", title="Dev Tools"))
 
-            pg = st.navigation(pages)
+            pg = st.navigation(pages, position="top")
+            
+            # Sidebar: Refresh & Logout 
+            with st.sidebar:
+                # User info bar (main area)
+                st.caption(f"Logged in as {st.session_state['username']} ({st.session_state['role']})")
+                if st.button("Refresh Data", use_container_width=True, key="sidebar_refresh"):
+                    st.rerun()
+                if st.button("Logout", use_container_width=True, key="sidebar_logout"):
+                    for key in list(st.session_state.keys()):
+                        del st.session_state[key]
+                    st.rerun()
+                st.divider()
+            
             pg.run()
         else:
             if self.auth_manager.admins_exist():

@@ -2,7 +2,6 @@ import random
 from repository.dao import DatabaseAccess
 import pandas as pd
 import calendar
-import holidays
 import datetime
 from logic.temporary_data import DataHolder
 
@@ -12,106 +11,87 @@ class ScheduleManager:
         self.dao = DatabaseAccess()
 
 
-    def generate_template_data(self, month, year):
-        """Generates the needed data for the empty template generation process"""
+    def generate_empty_template(self, month, year):
+        """Iterates through the dates of the month, determines their type, and creates empty shift assignments based on constraints."""
 
         # 1. Business logic check: If the 1st of the month exists, the template is already generated.
         first_day_of_month = datetime.date(year, month, 1)
         if self.dao.assignments_exist_for_date(first_day_of_month):
-            return False, "A schedule template for the given month and year already exists!"
+            return False, "A schedule template for the given month and year already exists!", None
         
-        # 2. Generate a list of all dates in the month
-        month_dates = []
-        num_days = calendar.monthrange(year, month)[1]
-        for day in range(1, num_days + 1):
-            current_date = datetime.date(year, month, day)
-            month_dates.append(current_date)
+        # 2. Generate the Data Holder object that will store neccessary data in memory for the template generation process.initialization.
+        data_holder = self.generate_data_holder(month, year)
 
-        # 3. Fetch shifts to create a name-to-id map to avoid database queries in the loop
+        # 3. Create the empty template in the DataHolder object based on constraints.
+        for date in data_holder.dates: # Itterate over all dates of the month
+            data_holder.shifts_schedule[date] = {} 
+            if date in data_holder.holidays or date.weekday() >= 5: # If current date is a Holiday or weekend
+                for shift_id, values in data_holder.shifts.items(): # Itterate over all shifts
+                    if values['runs_on_weekend_or_holiday'] == True: # If the shift runs on holidays/weekends, create an entry for it.
+                        data_holder.shifts_schedule[date][shift_id] = {"RS": None, "RH": None}
+            else: # Else if current date is a Weekday
+                for shift_id in data_holder.shifts: # Create entries for all shifts on weekdays
+                    data_holder.shifts_schedule[date][shift_id] = {"RS": None, "RH": None}
+        
+        # 4. Map the weekday dates to their respective weeks (e.g., 1st week of the month, 2nd week of the month, etc.)
+        data_holder._map_weekdays_to_weeks() 
+
+        # 5. Convert the nested dictionary empty template to a flattened list and push it to the database
+        flat_template = data_holder.return_flattened_empty_template()
+        if self.dao.bulk_insert_assignments(flat_template):
+            return True, f"Empty shift template for {data_holder.month}/{data_holder.year} generated and saved!", data_holder
+        return False, "Database error: Failed to save the empty template.", None
+
+
+    def generate_data_holder(self, month, year):
+        """Fetches assignments, employees, and shifts for a given month/year and returns an initialized DataHolder."""
+        data_holder = DataHolder()
         shifts_df = self.dao.get_all_shifts()
-        shift_map = dict(zip(shifts_df['shift_name'], shifts_df['id'])) # Key: shift_name, Value: shift_id
+        holidays_df = self.dao.get_all_holidays(year)
+        employees_df = self.dao.get_all_employees()
+        assignments_df = self.dao.get_assignments_for_month(month, year)
+        ft_hours = self.dao.get_single_constraint("Contract hours", "Full-time 100%")
+        ft_hours = float(ft_hours) if ft_hours else 42.5   # convert string to float
+        data_holder.set_up_data_holder(month, year, holidays_df, shifts_df, employees_df, assignments_df, ft_hours)
+        return data_holder
 
-        # 4. Iterate through the dates, determine their type, and create 2 empty assignments per shift
-        success, msg = self.generate_empty_template(month_dates, year, shift_map)
-        return success, msg
 
-
-    def generate_empty_template(self, month_dates, year, shift_map):
-        """Iterates through the dates of the month, determines their type, and creates empty shift assignments based on constraints."""
+    def assign_paramedics_to_weekdays_shifts(self, month, year):
+        """Fetches the empty assignments from the database and loads them into the DataHolder for the assignment process."""
+        first_day_of_month = datetime.date(year, month, 1)
+        if not self.dao.assignments_exist_for_date(first_day_of_month):
+            return False, "No schedule template exists for this month. Generate an empty template first."
         
-        shifts_per_day_dict = self.dao.get_constraints_by_category("Shifts per day")
-        assignments_to_insert = []
-
-        for date in month_dates:
-            date_type = self.get_date_type(date, year)
-            is_holiday = (date_type == "Holiday")
-            required_shifts = shifts_per_day_dict.get(date_type, [])
-
-            for shift_name in required_shifts:
-                self.append_empty_assignment(date, shift_name, None, "RS", is_holiday, shift_map, assignments_to_insert)
-                self.append_empty_assignment(date, shift_name, None, "RH", is_holiday, shift_map, assignments_to_insert)
+        data_holder = self.generate_data_holder(month, year)
+        shift_ids = data_holder.get_shift_ids()
         
-        # Once all loops are done, send the massive list to the database in one single query
-        if assignments_to_insert:
-            if self.dao.bulk_insert_assignments(assignments_to_insert):
-                return True, f"Successfully generated {len(assignments_to_insert)} assignment slots for {month_dates[0].month}/{year}!"
-            return False, "A database error occurred while saving the assignments."
-        else:
-            return False, "No slots created. Please go to the 'Constraints' page and assign shifts to the days of the week."
+        for week_key, dates_dict in data_holder.weekday_weeks.items():
+            # Refresh the pool of employees for the new week
+            fulltime_rs_ids = data_holder.get_fulltime_paramedic_ids()
+            
+            random.shuffle(shift_ids)
+            random.shuffle(fulltime_rs_ids)
+            
+            for local_shift_id in shift_ids:
+                local_employee = None
+                if fulltime_rs_ids:
+                    local_employee = fulltime_rs_ids.pop()
+                    
+                if local_employee:
+                    for date in dates_dict:
+                        if local_shift_id in data_holder.shifts_schedule.get(date, {}):
+                            if data_holder.shifts_schedule[date][local_shift_id].get("RS") is None:
+                                data_holder.shifts_schedule[date][local_shift_id]["RS"] = local_employee
+                                shift_duration = data_holder.shifts[local_shift_id]['shift_duration']
+                                data_holder.employee_hours[local_employee]["completed_hours"] += shift_duration
 
-
-    def append_empty_assignment(self, date, shift_name, employee_id, role, is_holidays, shift_map, assignments_list):
-        """Translates shift_name to shift_id and appends the assignment dictionary to a list."""
-        shift_id = shift_map.get(shift_name)
-        if shift_id:
-            assignments_list.append({
-                "date": date,
-                "shift_id": shift_id,
-                "employee_id": employee_id,
-                "role": role,
-                "is_holidays": is_holidays
-            })
-        else:
-            print(f"Warning: Shift name '{shift_name}' not found in database.")
-
-
-    def get_all_holidays_df(self, year=None):
-        """Pass-through to DAO to get holidays as a DataFrame, optionally filtered by year."""
-        return self.dao.get_all_holidays(year)
-
-
-    def get_date_type(self, date, year):
-        """Determines the type of a given date (weekday, weekend, or holiday)."""
-
-        # Fetch the list of holidays for the year from the database
-        holidays_list = self.dao.get_holidays_by_year(year)
-
-        if date in holidays_list:
-            return "Holiday"
-        elif date.weekday() == 6:  # 6 = Sunday
-            return "Sunday"
-        elif date.weekday() == 5:  # 5 = Saturday
-            return "Saturday"
-        else:
-            return "Weekdays"
-
-
-    def generate_year_holidays(self, year):
-        """Generates a list of holidays for the given year."""
-        region = self.dao.get_single_constraint("Holidays", "Region")
-        if not region:
-            return False, "Holiday region not set. Please set the holiday region in the constraints before generating the holidays."
-
-        ger_holidays = holidays.Germany(years=year, prov=region)
-
-        success_count = 0
-        for date, name in ger_holidays.items():
-            if self.dao.insert_holiday(year, date, name):
-                success_count += 1
-                
-        if success_count > 0:
-            return True, f"{success_count} holidays added successfully for {year}."
-        return False, f"Failed to add holidays for {year}. Check if they already exist."
+        # Extract the new assignments and send them to the database
+        updates_list = data_holder.get_db_updates()
+        if updates_list:
+            if self.dao.update_monthly_assignments(updates_list):
+                return True, f"Successfully auto-assigned {len(updates_list)} paramedic slots!"
+            return False, "Database error: Failed to save the auto-assignments."
+        return False, "No paramedics were available to assign."
 
 
     def get_assignments_pivot(self, month, year):
@@ -152,6 +132,20 @@ class ScheduleManager:
         pivot_df.columns.name = None
         
         return pivot_df
+    
+
+    def get_employee_hours_pivot(self, month, year):
+        """Builds an employee hours DataFrame from a fresh DataHolder."""
+        dh = self.generate_data_holder(month, year)
+        rows = []
+        for emp_id, hours in dh.employee_hours.items():
+            emp_name = dh.employees.get(emp_id, {}).get('name', f'ID {emp_id}')
+            rows.append({
+                'Employee': emp_name,
+                'Target Hours': hours['target_hours'],
+                'Completed Hours': hours['completed_hours']
+            })
+        return pd.DataFrame(rows)
 
 
     def save_edited_assignments(self, edited_df):
@@ -191,48 +185,3 @@ class ScheduleManager:
                 })
                 
         return self.dao.update_monthly_assignments(updates_list), "Schedule saved successfully!"
-
-
-    def load_data_for_assignment(self, month, year):
-        """Fetches assignments, employees, and shifts for a given month/year and returns an initialized DataHolder."""
-        assignments_df = self.dao.get_assignments_for_month(month, year)
-        employees_df = self.dao.get_all_employees()
-        shifts_df = self.dao.get_all_shifts()
-        
-        return DataHolder(month, year, assignments_df, employees_df, shifts_df)
-    
-
-    def assign_paramedics_to_shifts(self, month, year):
-        """Developer tool to assign paramedics to all empty RS slots for a given month/year. This is a one-click solution to quickly fill the schedule with valid assignments."""
-        data_holder = self.load_data_for_assignment(month, year)
-        shift_ids = list(data_holder.shifts.keys())
-        
-        # Iterate over the week keys ('week1', 'week2')
-        for week_key, dates_dict in data_holder.weekday_weeks.items():
-            # Refresh the pool of employees for the new week
-            fulltime_employees_ids = list(data_holder.employees.keys())
-            
-            random.shuffle(shift_ids)
-            random.shuffle(fulltime_employees_ids)
-            for local_shift_id in shift_ids: 
-                local_employee = None
-                
-                # Find the next available RS employee
-                while fulltime_employees_ids:
-                    candidate_id = fulltime_employees_ids.pop()
-                    if data_holder.employees[candidate_id].get('qualification') == 'RS':
-                        local_employee = candidate_id
-                        break
-                
-                if local_employee:
-                    for date in dates_dict:
-                        if local_shift_id in data_holder.assignments_local.get(date, {}):
-                            data_holder.assignments_local[date][local_shift_id]["RS"] = local_employee
-                            
-        # Extract the new assignments and send them to the database
-        updates_list = data_holder.get_db_updates()
-        if updates_list:
-            if self.dao.update_monthly_assignments(updates_list):
-                return True, f"Successfully auto-assigned {len(updates_list)} paramedic slots!"
-            return False, "Database error: Failed to save the auto-assignments."
-        return False, "No paramedics were available to assign."

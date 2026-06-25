@@ -33,7 +33,7 @@ class ShiftPage:
         """Section for deleting shifts from the system."""
         st.header("Delete Shift")
         with st.form("delete_shift_form", clear_on_submit=True):
-            id_to_delete = st.number_input("Shift ID", value=None, placeholder="Enter the ID of the shift to delete.")
+            id_to_delete = st.number_input("Shift ID", value=None, placeholder="Shift ID to delete")
             submitted = st.form_submit_button("Delete Shift")
             if submitted:
                 if st.session_state.get('role') == 'basic':
@@ -94,25 +94,16 @@ class ShiftPage:
 
     def render_page(self):
         """Renders the shift management page."""
-        st.sidebar.title(f"Welcome, {st.session_state['username']}!")
-        
-        st.sidebar.markdown("---")
-        if st.sidebar.button("Refresh Data"):
-            st.rerun()
-        if st.sidebar.button("Logout"):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
-            
-        col1, col2 = st.columns([3, 7], gap="xlarge")
-        with col1:
-            with st.container(border=True):
+        # Sidebar: Action widgets with expanders
+        with st.sidebar:
+            with st.expander("Add Shift", expanded=True):
                 self.add_shift_section()
-            with st.container(border=True):
+            with st.expander("Delete Shift", expanded=False):
                 self.delete_shift_section()
-        with col2:
-            with st.container(border=True):
-                self.display_shift_table()
+        
+        # Main area: Display only 
+        with st.container(border=True):
+            self.display_shift_table()
 
 
 if __name__ == "__main__":

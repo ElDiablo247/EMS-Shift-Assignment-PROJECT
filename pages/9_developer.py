@@ -101,7 +101,7 @@ class DeveloperPage:
             year = st.number_input("Assign Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="aa_test_year")
             
         if st.button("Auto-Assign Paramedics (RS)"):
-            success, message = self.schedule_manager.assign_paramedics_to_shifts(month, year)
+            success, message = self.schedule_manager.assign_paramedics_to_weekdays_shifts(month, year)
             if success:
                 st.success(message)
             else:
@@ -109,24 +109,12 @@ class DeveloperPage:
 
     def render_page(self):
         """Renders the developer tools page."""
-        st.sidebar.title(f"Welcome, {st.session_state['username']}!")
-        
-        st.sidebar.markdown("---")
-        if st.sidebar.button("Refresh Data"):
-            st.rerun()
-        if st.sidebar.button("Logout"):
-            for key in list(st.session_state.keys()):
-                del st.session_state[key]
-            st.rerun()
-        
         col1, col2 = st.columns([2, 2], gap="xlarge")
         with col1:
             with st.container(border=True):
                 self.add_constraint_section()
             with st.container(border=True):
                 self.dataholder_test_section()
-            with st.container(border=True):
-                self.auto_assign_section()
         with col2:
             with st.container(border=True):
                 self.bulk_upload_section()
