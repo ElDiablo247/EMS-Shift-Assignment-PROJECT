@@ -29,7 +29,7 @@ class AdminPage:
 
 
     def display_admins_table(self):
-        """Displays the admins with a custom layout and delete buttons."""
+        """Displays the admins in a table."""
         st.header("Registered Admins")
         admins_df = self.auth_manager.get_all_admins()
         

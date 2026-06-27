@@ -57,7 +57,7 @@ class ScheduleManager:
 
 
     def assign_paramedics_to_weekdays_shifts(self, month, year):
-        """Fetches the empty assignments from the database and loads them into the DataHolder for the assignment process."""
+        """Creates a DataHolder with data from DB, assigns full-time paramedics (RS) to weekday RS slots, saves to DB."""
         first_day_of_month = datetime.date(year, month, 1)
         if not self.dao.assignments_exist_for_date(first_day_of_month):
             return False, "No schedule template exists for this month. Generate an empty template first."
@@ -67,17 +67,21 @@ class ScheduleManager:
         
         for week_key, dates_dict in data_holder.weekday_weeks.items():
             # Refresh the pool of employees for the new week
-            fulltime_rs_ids = data_holder.get_fulltime_paramedic_ids()
+            non_flexible_rs_ids = data_holder.get_non_flexible_paramedic_ids()
             
             random.shuffle(shift_ids)
-            random.shuffle(fulltime_rs_ids)
+            random.shuffle(non_flexible_rs_ids)
             
             for local_shift_id in shift_ids:
                 local_employee = None
-                if fulltime_rs_ids:
-                    local_employee = fulltime_rs_ids.pop()
+                if non_flexible_rs_ids:
+                    local_employee = non_flexible_rs_ids.pop()
                     
                 if local_employee:
+                    emp_hours = data_holder.employee_hours[local_employee]
+                    if emp_hours["completed_hours"] >= emp_hours["target_hours"]:
+                        continue  # skip to next shift, pop a different employee
+
                     for date in dates_dict:
                         if local_shift_id in data_holder.shifts_schedule.get(date, {}):
                             if data_holder.shifts_schedule[date][local_shift_id].get("RS") is None:
@@ -85,7 +89,7 @@ class ScheduleManager:
                                 shift_duration = data_holder.shifts[local_shift_id]['shift_duration']
                                 data_holder.employee_hours[local_employee]["completed_hours"] += shift_duration
 
-        # Extract the new assignments and send them to the database
+        # Extract the new assignments and send them to the database to be saved.
         updates_list = data_holder.get_db_updates()
         if updates_list:
             if self.dao.update_monthly_assignments(updates_list):

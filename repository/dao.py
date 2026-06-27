@@ -1,5 +1,5 @@
 from repository.db_engine import db_obj
-from repository.models import Employee, Shift, Admin, Constraint, Holiday, Assignment
+from repository.models import Employee, Shift, Admin, Constraint, Holiday, Assignment, SickLeave, Vacation
 import pandas as pd
 import calendar
 import datetime
@@ -500,3 +500,71 @@ class DatabaseAccess:
         except Exception as e:
             print(f"Error updating monthly assignments: {e}")
             return False
+
+
+    def insert_vacation(self, employee_id, start_date, end_date):
+        """Inserts a vacation record into the database."""
+        try:
+            with self.db.get_session() as session:
+                new_vacation = Vacation(
+                    employee_id=employee_id,
+                    start_date=start_date,
+                    end_date=end_date
+                )
+                session.add(new_vacation)
+            return True
+        except Exception as e:
+            print(f"Error inserting vacation: {e}")
+            return False
+
+
+    def delete_vacation(self, vacation_id):
+        """Deletes a vacation record from the database based on its ID."""
+        try:
+            with self.db.get_session() as session:
+                vacation_to_delete = session.query(Vacation).filter(Vacation.id == vacation_id).first()
+                if vacation_to_delete:
+                    session.delete(vacation_to_delete)
+                    return True
+                else:
+                    print(f"Vacation with ID {vacation_id} not found in the DB.")
+                    return False
+        except Exception as e:
+            print(f"Error deleting vacation: {e}")
+            return False
+
+
+    def insert_sick_leave(self, employee_id, start_date, end_date):
+        """Inserts a sick leave record into the database."""
+        try:
+            with self.db.get_session() as session:
+                new_sick_leave = SickLeave(
+                    employee_id=employee_id,
+                    start_date=start_date,
+                    end_date=end_date
+                )
+                session.add(new_sick_leave)
+            return True
+        except Exception as e:
+            print(f"Error inserting sick leave: {e}")
+            return False
+
+
+    def get_all_vacations(self):
+        try:
+            with self.db.get_session() as session:
+                query = session.query(Vacation).order_by(Vacation.start_date)
+                return pd.read_sql(query.statement, session.bind)
+        except Exception as e:
+            print(f"Error retrieving vacations: {e}")
+            return pd.DataFrame()
+
+
+    def get_all_sick_leaves(self):
+        try:
+            with self.db.get_session() as session:
+                query = session.query(SickLeave).order_by(SickLeave.start_date)
+                return pd.read_sql(query.statement, session.bind)
+        except Exception as e:
+            print(f"Error retrieving sick leaves: {e}")
+            return pd.DataFrame()

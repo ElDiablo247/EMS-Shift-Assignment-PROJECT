@@ -88,25 +88,6 @@ class DeveloperPage:
                 st.error("Please click 'Load DataHolder' first.")
 
 
-    def auto_assign_section(self):
-        """Developer tool to trigger auto-assignment of paramedics."""
-        st.header("Auto-Assign Tester")
-        st.info("Trigger the auto-assignment algorithm for paramedics (RS) for a specific month and year.")
-        
-        now = datetime.datetime.now()
-        col1, col2 = st.columns(2)
-        with col1:
-            month = st.number_input("Assign Month", min_value=1, max_value=12, value=now.month, step=1, key="aa_test_month")
-        with col2:
-            year = st.number_input("Assign Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="aa_test_year")
-            
-        if st.button("Auto-Assign Paramedics (RS)"):
-            success, message = self.schedule_manager.assign_paramedics_to_weekdays_shifts(month, year)
-            if success:
-                st.success(message)
-            else:
-                st.error(message)
-
     def render_page(self):
         """Renders the developer tools page."""
         col1, col2 = st.columns([2, 2], gap="xlarge")

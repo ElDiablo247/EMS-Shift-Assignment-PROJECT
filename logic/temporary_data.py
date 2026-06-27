@@ -145,10 +145,10 @@ class DataHolder:
                 self.weekday_weeks.setdefault(week_key, {})[current_date] = self.shifts_schedule[current_date]
 
 
-    def get_fulltime_paramedic_ids(self):
-        """Returns a list of employee IDs who are full-time (100%) and have the 'RS' qualification."""
+    def get_non_flexible_paramedic_ids(self):
+        """Returns a list of employee IDs who are full-time or part-time and have the 'RS' qualification."""
         return [emp_id for emp_id, emp_data in self.employees.items() 
-                if emp_data.get('contract_type') == '100%' and emp_data.get('qualification') == 'RS']
+                if emp_data.get('contract_type') != 'Flexible' and emp_data.get('qualification') == 'RS']
 
 
     def get_shift_ids(self):

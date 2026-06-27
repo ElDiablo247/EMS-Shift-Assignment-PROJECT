@@ -1,5 +1,3 @@
-from calendar import calendar
-
 import streamlit as st
 from logic.auth_utils import ensure_authenticated
 from logic.schedule_manager import ScheduleManager
@@ -16,6 +14,7 @@ class AssignmentPage:
 
 
     def generate_empty_template_section(self):
+        """Section for generating an empty assignment template for a specific month and year."""
         st.info("Select the month and year to generate the initial empty assignment template.")
         now = datetime.datetime.now()
         col_1, col_2 = st.columns(2)

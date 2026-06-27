@@ -49,7 +49,7 @@ class Assignment(Base):
     role = Column(String, nullable=False)
     is_holidays = Column(Boolean, nullable=False)
 
-    # Hidden attributes that all assignment objects have
+    # Hidden attributes that all assignment objects have, in case we need to use ORM to retreave data.
     employee = relationship('Employee', back_populates='assignments') 
     shift = relationship('Shift', back_populates='assignments')
 
@@ -71,3 +71,21 @@ class Holiday(Base):
     year = Column(Integer, nullable=False)
     date = Column(Date, nullable=False, unique=True)
     name = Column(String, nullable=False)
+
+
+class Vacation(Base):
+    __tablename__ = 'vacations'
+    
+    id = Column(Integer, primary_key=True)
+    employee_id = Column(Integer, ForeignKey('employees.id'), nullable=False)
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)
+
+
+class SickLeave(Base):
+    __tablename__ = 'sick_leaves'
+    
+    id = Column(Integer, primary_key=True)
+    employee_id = Column(Integer, ForeignKey('employees.id'), nullable=False)
+    start_date = Column(Date, nullable=False)
+    end_date = Column(Date, nullable=False)

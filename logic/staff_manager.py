@@ -8,9 +8,7 @@ class StaffManager:
 
 
     def add_employee(self, name, date_of_birth, qualification, contract_type):
-        """
-        Validates input, generates an ID, and calls DAO to save employee.
-        """
+        """Validates input, generates an ID, and calls DAO to save employee."""
         if not name:
             return False, "Validation failed: Name field is missing."
         if not date_of_birth:
@@ -31,6 +29,70 @@ class StaffManager:
             return True, "Employee added successfully."
         else:
             return False, "Error adding employee. Please try again."
+
+
+    def add_vacation(self, employee_id, start_date, end_date):
+        """Validates input and calls DAO to insert vacation."""
+        if not employee_id:
+            return False, "Validation failed: Employee ID is missing."
+        if not start_date:
+            return False, "Validation failed: Start date is missing."
+        if not end_date:
+            return False, "Validation failed: End date is missing."
+        
+        success = self.dao.insert_vacation(employee_id, start_date, end_date)
+        if success:
+            return True, "Vacation added successfully."
+        else:
+            return False, "Error adding vacation. Please try again."
+
+
+    def delete_vacation(self, vacation_id):
+        """Validates input and calls DAO to delete vacation."""
+        if not vacation_id:
+            return False, "Validation failed: Vacation ID is missing."
+        
+        success = self.dao.delete_vacation(vacation_id)
+        if success:
+            return True, "Vacation deleted successfully."
+        else:
+            return False, "Error deleting vacation. Please try again."
+
+
+    def add_sick_leave(self, employee_id, start_date, end_date):
+        """Validates input and calls DAO to insert a sick leave for an employee"""
+        if not employee_id:
+            return False, "Validation failed: Employee ID is missing."
+        if not start_date:
+            return False, "Validation failed: Start date is missing."
+        if not end_date:
+            return False, "Validation failed: End date is missing."
+        
+        success = self.dao.insert_sick_leave(employee_id, start_date, end_date)
+        if success:
+            return True, "Sick leave added successfully."
+        else:
+            return False, "Error adding sick leave. Please try again."
+
+
+    def get_all_vacations_pivot(self):
+        df = self.dao.get_all_vacations()
+        if df.empty:
+            return df
+        employees_df = self.dao.get_all_employees()
+        name_map = dict(zip(employees_df['id'], employees_df['name']))
+        df['employee_name'] = df['employee_id'].map(name_map)
+        return df[['id', 'employee_name', 'start_date', 'end_date']]
+
+
+    def get_all_sick_leaves_pivot(self):
+        df = self.dao.get_all_sick_leaves()
+        if df.empty:
+            return df
+        employees_df = self.dao.get_all_employees()
+        name_map = dict(zip(employees_df['id'], employees_df['name']))
+        df['employee_name'] = df['employee_id'].map(name_map)
+        return df[['id', 'employee_name', 'start_date', 'end_date']]
 
 
     def update_employees(self, employees_df):
