@@ -65,35 +65,49 @@ class ScheduleManager:
         data_holder = self.generate_data_holder(month, year)
         shift_ids = data_holder.get_shift_ids()
         
-        for week_key, dates_dict in data_holder.weekday_weeks.items():
-            # Refresh the pool of employees for the new week
-            non_flexible_rs_ids = data_holder.get_non_flexible_paramedic_ids()
-            
-            random.shuffle(shift_ids)
-            random.shuffle(non_flexible_rs_ids)
-            
-            for local_shift_id in shift_ids:
-                local_employee = None
-                if non_flexible_rs_ids:
-                    local_employee = non_flexible_rs_ids.pop()
-                    
-                if local_employee:
-                    emp_hours = data_holder.employee_hours[local_employee]
-                    if emp_hours["completed_hours"] >= emp_hours["target_hours"]:
-                        continue  # skip to next shift, pop a different employee
+        for contract_type in ["100%", "75%", "50%"]:
+            for week_key, dates_dict in data_holder.weekday_weeks.items():
+                # Get only employees of THIS contract tier
+                tier_ids = data_holder.get_paramedic_ids_by_contract(contract_type)
+
+                if not tier_ids:
+                    continue  # Nobody in this tier, skip to next
+
+                random.shuffle(shift_ids)
+                random.shuffle(tier_ids)
+
+                for local_shift_id in shift_ids:
+                    local_employee = None
 
                     for date in dates_dict:
-                        if local_shift_id in data_holder.shifts_schedule.get(date, {}):
-                            if data_holder.shifts_schedule[date][local_shift_id].get("RS") is None:
-                                data_holder.shifts_schedule[date][local_shift_id]["RS"] = local_employee
-                                shift_duration = data_holder.shifts[local_shift_id]['shift_duration']
-                                data_holder.employee_hours[local_employee]["completed_hours"] += shift_duration
+                        # Shift doesn't run on this date
+                        if local_shift_id not in data_holder.shifts_schedule.get(date, {}):
+                            continue
+                        # RS slot already filled by a higher-priority tier
+                        if data_holder.shifts_schedule[date][local_shift_id].get("RS") is not None:
+                            continue
+
+                        # Reuse current employee if under target, else get a new one
+                        if local_employee is None:
+                            while tier_ids:
+                                candidate = tier_ids.pop()
+                                if data_holder.employee_hours[candidate]["completed_hours"] < data_holder.employee_hours[candidate]["target_hours"]:
+                                    local_employee = candidate
+                                    break
+                            if local_employee is None:
+                                break  # Nobody available
+
+                        data_holder.shifts_schedule[date][local_shift_id]["RS"] = local_employee
+                        shift_duration = data_holder.shifts[local_shift_id]['shift_duration']
+                        data_holder.employee_hours[local_employee]["completed_hours"] += shift_duration
+                        if data_holder.employee_hours[local_employee]["completed_hours"] >= data_holder.employee_hours[local_employee]["target_hours"]:
+                            local_employee = None  # force a new pop next day
 
         # Extract the new assignments and send them to the database to be saved.
         updates_list = data_holder.get_db_updates()
         if updates_list:
             if self.dao.update_monthly_assignments(updates_list):
-                return True, f"Successfully auto-assigned {len(updates_list)} paramedic slots!"
+                return True, f"Successfully auto-assigned paramedic slots!"
             return False, "Database error: Failed to save the auto-assignments."
         return False, "No paramedics were available to assign."
 
@@ -103,7 +117,7 @@ class ScheduleManager:
         df = self.dao.get_assignments_for_month(month, year)
         if df.empty:
             return df
-            
+        
         # Fetch related data to perform the joins in-memory
         shifts_df = self.dao.get_all_shifts()
         employees_df = self.dao.get_all_employees()

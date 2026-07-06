@@ -11,7 +11,7 @@ class DatabaseEngine:
     def __init__(self):
 
         db_url = os.getenv("DATABASE_URL")
-        self.engine = create_engine(db_url)
+        self.engine = create_engine(db_url, pool_pre_ping=True)
         self._session_factory = sessionmaker(bind=self.engine)
         Base.metadata.create_all(self.engine)
 
