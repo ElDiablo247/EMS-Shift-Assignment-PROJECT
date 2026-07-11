@@ -110,7 +110,7 @@ class AssignmentPage:
 
 
     def employee_hours_section(self):
-        """Display target and completed hours for all active employees."""
+        """Display target and completed hours for all active employees for the selected month and year."""
         st.header("Employee Worktime Overview")
         
         now = datetime.datetime.now()
@@ -156,7 +156,7 @@ class AssignmentPage:
             with st.expander("Auto Assign Paramedics", expanded=True):
                 self.auto_assign_section()
         
-        col1, col2 = st.columns([4, 2], gap="small")
+        col1, col2 = st.columns([5, 2], gap="small")
         with col1:
             with st.container(border=True):
                 self.display_schedule_section()

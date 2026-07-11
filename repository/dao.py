@@ -4,6 +4,7 @@ import pandas as pd
 import calendar
 import datetime
 
+
 class DatabaseAccess:
     def __init__(self):
         self.db = db_obj
@@ -439,6 +440,19 @@ class DatabaseAccess:
         except Exception as e:
             print(f"Error bulk inserting assignments: {e}")
             return False
+
+
+    def get_assignments_for_date(self, date):
+        """Retrieves all assignments for a single date."""
+        try:
+            with self.db.get_session() as session:
+                query = session.query(Assignment)\
+                .filter(Assignment.date == date)\
+                .order_by(Assignment.date)
+                return pd.read_sql(query.statement, session.bind)
+        except Exception as e:
+            print(f"Error retrieving assignments for date {date}: {e}")
+            return pd.DataFrame()
 
 
     def get_assignments_for_month(self, month, year):

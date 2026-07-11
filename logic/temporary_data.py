@@ -14,6 +14,8 @@ class DataHolder:
         self.employees = {}
         self.weekday_weeks = {}
         self.employee_hours = {}
+        self.assigned_employees_for_date = {}
+        self.prev_month_shift_pattern = {}
 
 
     def set_up_data_holder(self, month, year, holidays_df, shifts_df, employees_df, assignments_df, ft_hours):
@@ -27,6 +29,7 @@ class DataHolder:
         self._store_shift_schedule(assignments_df)
         self._map_weekdays_to_weeks()
         self._map_employees_to_hours(ft_hours, assignments_df, shifts_df)
+        self._map_assigned_employees_for_date()
 
 
     def _store_dates(self, month, year):
@@ -59,20 +62,21 @@ class DataHolder:
         """Converts the database assignments DataFrame into the nested shifts_schedule dictionary."""
         if df.empty:
             return
-        # Filter to only keep rows where employee_id is missing (NaN/Null)
-        unassigned_df = df[df['employee_id'].isna()]
-            
-        for _, row in unassigned_df.iterrows():
+        for _, row in df.iterrows():
             date_val = pd.to_datetime(row['date']).date()
             shift_id = row['shift_id']
             role = row['role']
-            
-            # Rebuilds the 3-layer nesting, explicitly setting the slot to None
-            self.shifts_schedule.setdefault(date_val, {}).setdefault(shift_id, {})[role] = None
+            emp_id = row['employee_id']
+            if pd.isna(emp_id):
+                emp_id = None
+            else:
+                emp_id = int(emp_id)
+
+            self.shifts_schedule.setdefault(date_val, {}).setdefault(shift_id, {})[role] = emp_id
 
 
     def _map_employees_to_hours(self, fulltime_weekly_hours, assignments_df, shifts_df):
-        """Calculate target and completed hours for each employee."""
+        """Calculate target and completed hours for each employee for the specified month and year."""
         working_days = sum(1 for d in self.dates if d.weekday() < 5 and d not in self.holidays)
         
         shift_duration_map = dict(zip(shifts_df['id'], shifts_df['shift_duration']))
@@ -145,9 +149,99 @@ class DataHolder:
                 self.weekday_weeks.setdefault(week_key, {})[current_date] = self.shifts_schedule[current_date]
 
 
+    def _map_assigned_employees_for_date(self):
+        """Creates a mapping of each date to a set of employee IDs that have been assigned to shifts on that date"""
+        for date_val, shifts in self.shifts_schedule.items():
+            busy = set()
+            for shift_id, roles in shifts.items():
+                for role, emp_id in roles.items():
+                    if emp_id is not None:
+                        busy.add(emp_id)
+            self.assigned_employees_for_date[date_val] = busy
+
+
+    def _set_prev_month_shift_pattern(self, assignments_df):
+        """
+        Stores the shift pattern from the last weekday of the previous month,
+        but ONLY if that day was a regular weekday (Mon-Thu) and NOT a holiday.
+        Otherwise sets prev_month_shift_pattern to None.
+        
+        Pattern format: {shift_id: {role: employee_id}}
+        """
+        if assignments_df.empty:
+            self.prev_month_shift_pattern = None
+            return
+
+        # Get the date from the first row (all rows share the same date)
+        date_val = pd.to_datetime(assignments_df['date'].iloc[0]).date()
+
+        # Only carry over if it's Mon-Thu (0-3) and NOT a holiday
+        if date_val.weekday() > 3:  # Friday (4) or weekend (5,6)
+            self.prev_month_shift_pattern = None
+            return
+        if date_val in self.holidays:
+            self.prev_month_shift_pattern = None
+            return
+
+        # Build the pattern dict
+        self.prev_month_shift_pattern = {}
+        for _, row in assignments_df.iterrows():
+            shift_id = row['shift_id']
+            role = row['role']
+            emp_id = row['employee_id']
+            if pd.notna(emp_id):
+                self.prev_month_shift_pattern.setdefault(shift_id, {})[role] = int(emp_id)
+            else:
+                self.prev_month_shift_pattern.setdefault(shift_id, {})[role] = None
+
+
+    def _apply_prev_month_pattern(self):
+        """If prev_month_shift_pattern is set, copies it into the first weekdays of the new month (until Sunday) that belong
+        to the same calendar week as the previous month's last day. Only fills slots that are still None."""
+        if not self.prev_month_shift_pattern:
+            return
+
+        first_date = self.dates[0]
+        if first_date.weekday() == 0 or first_date.weekday() >= 5:
+            return  # Month starts on Monday or weekend → nothing to do
+
+        days_until_sunday = 7 - first_date.weekday()
+
+        for i in range(days_until_sunday):
+            if i >= len(self.dates):
+                break
+            date = self.dates[i]
+            if date.weekday() >= 5:
+                continue
+            if date not in self.shifts_schedule:
+                continue
+
+            for shift_id in self.shifts_schedule[date]:
+                if shift_id in self.prev_month_shift_pattern:
+                    for role in ('RS', 'RH'):
+                        prev_emp = self.prev_month_shift_pattern[shift_id].get(role)
+                        if prev_emp is not None:
+                            if self.shifts_schedule[date][shift_id].get(role) is None:
+                                self.shifts_schedule[date][shift_id][role] = prev_emp
+                                self.employee_hours[prev_emp]["completed_hours"] += self.shifts[shift_id]["shift_duration"]
+                                self.assigned_employees_for_date.setdefault(date, set()).add(prev_emp)
+
+
     def get_paramedic_ids_by_contract(self, contract_type):
         return [eid for eid, emp in self.employees.items()
                 if emp.get('contract_type') == contract_type and emp.get('qualification') == 'RS']
+
+
+    def select_eligible_employee_id(self, pool, date):
+        """Pops and returns the first employee from the pool who is still under their target. Returns None if nobody in the pool has room left."""
+        while pool:
+            candidate = pool.pop()
+            if self.employee_hours[candidate]["completed_hours"] >= self.employee_hours[candidate]["target_hours"]:
+                continue
+            if candidate in self.assigned_employees_for_date.get(date, set()):
+                continue
+            return candidate
+        return None
 
 
     def get_shift_ids(self):

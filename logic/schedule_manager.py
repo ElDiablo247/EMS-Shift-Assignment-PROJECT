@@ -57,51 +57,30 @@ class ScheduleManager:
 
 
     def assign_paramedics_to_weekdays_shifts(self, month, year):
-        """Creates a DataHolder with data from DB, assigns full-time paramedics (RS) to weekday RS slots, saves to DB."""
+        """Creates a DataHolder with data from DB, assigns paramedics (RS) to weekday RS slots, prioritising by their contract type 
+        in this order (100%, 75%, 50%), then saves to DB."""
+        # Check if a partial schedule already exists for the month/year. If yes, return an error message, if not, proceed.
         first_day_of_month = datetime.date(year, month, 1)
         if not self.dao.assignments_exist_for_date(first_day_of_month):
             return False, "No schedule template exists for this month. Generate an empty template first."
         
+        # Generate a DataHolder with all the necessary data for the month/year, and get the shift schedule of the last day of previous month.
+        # Then apply the previous month's shift pattern to the current month, and get the list of shift IDs for assignment.
         data_holder = self.generate_data_holder(month, year)
+        self._load_prev_month_shift_pattern(month, year, data_holder)
+        data_holder._apply_prev_month_pattern()
         shift_ids = data_holder.get_shift_ids()
         
+        # Iterate over the contract types in order of priority (100%, 75%, 50%) and then over each week of the month.
         for contract_type in ["100%", "75%", "50%"]:
             for week_key, dates_dict in data_holder.weekday_weeks.items():
-                # Get only employees of THIS contract tier
-                tier_ids = data_holder.get_paramedic_ids_by_contract(contract_type)
-
-                if not tier_ids:
-                    continue  # Nobody in this tier, skip to next
-
+                employee_ids = data_holder.get_paramedic_ids_by_contract(contract_type)
+                if not employee_ids:
+                    continue  # No remaining employees with this contract type, skip to next type.
+                
                 random.shuffle(shift_ids)
-                random.shuffle(tier_ids)
-
                 for local_shift_id in shift_ids:
-                    local_employee = None
-
-                    for date in dates_dict:
-                        # Shift doesn't run on this date
-                        if local_shift_id not in data_holder.shifts_schedule.get(date, {}):
-                            continue
-                        # RS slot already filled by a higher-priority tier
-                        if data_holder.shifts_schedule[date][local_shift_id].get("RS") is not None:
-                            continue
-
-                        # Reuse current employee if under target, else get a new one
-                        if local_employee is None:
-                            while tier_ids:
-                                candidate = tier_ids.pop()
-                                if data_holder.employee_hours[candidate]["completed_hours"] < data_holder.employee_hours[candidate]["target_hours"]:
-                                    local_employee = candidate
-                                    break
-                            if local_employee is None:
-                                break  # Nobody available
-
-                        data_holder.shifts_schedule[date][local_shift_id]["RS"] = local_employee
-                        shift_duration = data_holder.shifts[local_shift_id]['shift_duration']
-                        data_holder.employee_hours[local_employee]["completed_hours"] += shift_duration
-                        if data_holder.employee_hours[local_employee]["completed_hours"] >= data_holder.employee_hours[local_employee]["target_hours"]:
-                            local_employee = None  # force a new pop next day
+                    self.fill_dates_of_week_with_paramedics(data_holder, local_shift_id, dates_dict, employee_ids)
 
         # Extract the new assignments and send them to the database to be saved.
         updates_list = data_holder.get_db_updates()
@@ -110,6 +89,46 @@ class ScheduleManager:
                 return True, f"Successfully auto-assigned paramedic slots!"
             return False, "Database error: Failed to save the auto-assignments."
         return False, "No paramedics were available to assign."
+
+
+    def fill_dates_of_week_with_paramedics(self, data_holder, shift_id, dates_dict, employee_ids):
+        """Helper function to fill a week's worth of shifts with paramedics of a specific contract type."""
+        local_employee = 'empty'
+
+        for date in dates_dict:
+            if shift_id not in data_holder.shifts_schedule.get(date, {}) or data_holder.shifts_schedule[date][shift_id].get("RS") is not None:
+                continue # If the shift doesn't exist on this date or is already filled, skip to the next date.
+            
+            if local_employee == 'empty':
+                local_employee = data_holder.select_eligible_employee_id(employee_ids, date)
+                if local_employee is None: 
+                    break # This means there are no more eligible employees at all so the rest of the week will remain unassigned for this shift.
+            
+            data_holder.shifts_schedule[date][shift_id]["RS"] = local_employee
+            data_holder.assigned_employees_for_date[date].add(local_employee) 
+            data_holder.employee_hours[local_employee]["completed_hours"] += data_holder.shifts[shift_id]["shift_duration"]
+            if data_holder.employee_hours[local_employee]["completed_hours"] >= data_holder.employee_hours[local_employee]["target_hours"]:
+                local_employee = 'empty'
+
+
+    def _load_prev_month_shift_pattern(self, month, year, data_holder):
+        """Finds the last weekday of the previous month, fetches its assignments from the DB, and passes them to the DataHolder for carry-over."""
+        if month == 1:
+            prev_month, prev_year = 12, year - 1
+        else:
+            prev_month, prev_year = month - 1, year
+
+        num_days = calendar.monthrange(prev_year, prev_month)[1]
+        last_weekday_date = None
+        for day in range(num_days, 0, -1):
+            date = datetime.date(prev_year, prev_month, day)
+            if date.weekday() < 5:
+                last_weekday_date = date
+                break
+
+        if last_weekday_date:
+            df = self.dao.get_assignments_for_date(last_weekday_date)
+            data_holder._set_prev_month_shift_pattern(df)
 
 
     def get_assignments_pivot(self, month, year):
@@ -131,7 +150,7 @@ class ScheduleManager:
         df['employee_name'] = df['employee_id'].map(emp_name_map)
         
         # Format date so the pivot column headers look nice
-        df['date'] = pd.to_datetime(df['date']).dt.strftime('%d.%m.%Y')
+        df['date'] = pd.to_datetime(df['date']).dt.strftime('%d.%m.%Y - %A')
         
         # Replace NaN with 'Empty' ONLY for slots that actually exist in the DB
         df['employee_name'] = df['employee_name'].fillna("Empty")
@@ -150,7 +169,7 @@ class ScheduleManager:
         pivot_df.columns.name = None
         
         return pivot_df
-    
+
 
     def get_employee_hours_pivot(self, month, year):
         """Builds an employee hours DataFrame from a fresh DataHolder."""
@@ -191,7 +210,8 @@ class ScheduleManager:
             shift_name, role = row['shift_role_str'].split(' - ')
             
             # Convert date string back to actual date object
-            date_obj = datetime.datetime.strptime(row['date'], '%d.%m.%Y').date()
+            date_str = row['date'].split(' - ')[0]
+            date_obj = datetime.datetime.strptime(date_str, '%d.%m.%Y').date()
             shift_id = shift_name_to_id.get(shift_name)
             
             if shift_id:
