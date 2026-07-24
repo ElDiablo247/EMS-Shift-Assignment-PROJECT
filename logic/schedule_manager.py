@@ -111,6 +111,61 @@ class ScheduleManager:
                 local_employee = 'empty'
 
 
+    def assign_rh_to_weekdays_shifts(self, month, year):
+        """Creates a DataHolder (with RS assignments already loaded from DB), then fills
+        weekday RH slots. Priority: contract tier (100% → 75% → 50% → Flexible), and
+        within each tier by remaining hours (most first). Finally saves to DB."""
+        first_day_of_month = datetime.date(year, month, 1)
+        if not self.dao.assignments_exist_for_date(first_day_of_month):
+            return False, "No schedule template exists for this month. Generate an empty template first."
+
+        data_holder = self.generate_data_holder(month, year)
+        self._load_prev_month_shift_pattern(month, year, data_holder)
+        data_holder._apply_prev_month_pattern()
+        shift_ids = data_holder.get_shift_ids()
+
+        for contract_type in ["100%", "75%", "50%", "Flexible"]:
+            for week_key, dates_dict in data_holder.weekday_weeks.items():
+                employee_ids = data_holder.get_employees_sorted_by_remaining(contract_type)
+                if not employee_ids:
+                    continue
+
+                random.shuffle(shift_ids)
+                for local_shift_id in shift_ids:
+                    self.fill_dates_of_week_with_rh(data_holder, local_shift_id, dates_dict, employee_ids)
+
+        updates_list = data_holder.get_db_updates()
+        if updates_list:
+            if self.dao.update_monthly_assignments(updates_list):
+                return True, "Successfully auto-assigned RH slots!"
+            return False, "Database error: Failed to save the RH auto-assignments."
+        return False, "No employees were available to assign to RH slots."
+
+
+    def fill_dates_of_week_with_rh(self, data_holder, shift_id, dates_dict, employee_ids):
+        """Fills a week's worth of RH slots for one shift. Keeps the same employee across
+        all dates of the week until they hit their target, then picks the next eligible one.
+        Each candidate must pass: under target, not already on that date, and 11h rest."""
+        local_employee = 'empty'
+
+        for date in dates_dict:
+            if (shift_id not in data_holder.shifts_schedule.get(date, {})
+                    or data_holder.shifts_schedule[date][shift_id].get("RH") is not None):
+                continue
+
+            if local_employee == 'empty':
+                local_employee = data_holder.select_eligible_employee_for_rh(employee_ids, date, shift_id)
+                if local_employee is None:
+                    break
+
+            data_holder.shifts_schedule[date][shift_id]["RH"] = local_employee
+            data_holder.assigned_employees_for_date[date].add(local_employee)
+            data_holder.employee_hours[local_employee]["completed_hours"] += data_holder.shifts[shift_id]["shift_duration"]
+
+            if data_holder.employee_hours[local_employee]["completed_hours"] >= data_holder.employee_hours[local_employee]["target_hours"]:
+                local_employee = 'empty'
+
+
     def _load_prev_month_shift_pattern(self, month, year, data_holder):
         """Finds the last weekday of the previous month, fetches its assignments from the DB, and passes them to the DataHolder for carry-over."""
         if month == 1:

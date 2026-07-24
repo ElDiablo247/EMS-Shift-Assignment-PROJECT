@@ -42,7 +42,7 @@ class ConstraintsPage:
                     "category": st.column_config.TextColumn("Category"),
                     "constraint_key": st.column_config.TextColumn("Key"),
                     "constraint_value": st.column_config.TextColumn("Value", width="medium"),
-                    "description": None
+                    "description": st.column_config.TextColumn("Description", width="medium")
                 },
                 hide_index=True,
                 use_container_width=False
@@ -134,7 +134,7 @@ class ConstraintsPage:
                 self.generate_holidays_section()
         
         # Main area: 50-50 constraints table and holidays table
-        col1, col2 = st.columns(2, gap="large")
+        col1, col2 = st.columns([3, 2], gap="large")
         with col1:
             with st.container(border=True):
                 self.overview_section()

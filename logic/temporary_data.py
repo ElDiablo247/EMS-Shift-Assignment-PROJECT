@@ -244,6 +244,88 @@ class DataHolder:
         return None
 
 
+    # ------------------------------------------------------------------
+    # RH assignment helpers
+    # ------------------------------------------------------------------
+
+    def _get_employee_shift_for_date(self, emp_id, date):
+        """Returns (shift_id, role) if the employee is assigned on the given date, otherwise None.
+        Looks up shifts_schedule which covers the current month only."""
+        shifts_on_date = self.shifts_schedule.get(date)
+        if not shifts_on_date:
+            return None
+        for shift_id, roles in shifts_on_date.items():
+            for role, assigned_emp in roles.items():
+                if assigned_emp == emp_id:
+                    return shift_id, role
+        return None
+
+
+    def is_11h_rest_satisfied(self, emp_id, date, proposed_shift_id):
+        """Checks whether assigning emp_id to proposed_shift_id on 'date' respects the
+        11-hour rest period after their assignment on the previous calendar day.
+        
+        Handles overnight shifts (end < start) by shifting the end datetime forward by one day."""
+        prev_date = date - datetime.timedelta(days=1)
+        prev_assignment = self._get_employee_shift_for_date(emp_id, prev_date)
+
+        if prev_assignment is None:
+            return True  # no previous assignment → no violation
+
+        prev_shift_id, _ = prev_assignment
+        prev_shift = self.shifts[prev_shift_id]
+        proposed_shift = self.shifts[proposed_shift_id]
+
+        prev_end_time = prev_shift['shift_end']
+        prev_start_time = prev_shift['shift_start']
+        proposed_start_time = proposed_shift['shift_start']
+
+        # Build full datetime for previous shift's end
+        prev_end_dt = datetime.datetime.combine(prev_date, prev_end_time)
+        if prev_end_time < prev_start_time:
+            # Overnight shift – the end time falls on the next calendar day
+            prev_end_dt += datetime.timedelta(days=1)
+
+        # Build full datetime for proposed shift's start
+        proposed_start_dt = datetime.datetime.combine(date, proposed_start_time)
+
+        gap_hours = (proposed_start_dt - prev_end_dt).total_seconds() / 3600.0
+        return gap_hours >= 11.0
+
+
+    def get_employees_sorted_by_remaining(self, contract_type):
+        """Returns employee IDs of the given contract_type, sorted by remaining hours
+        descending (most remaining first). Excludes employees already at or over target."""
+        candidates = []
+        for eid, emp in self.employees.items():
+            if emp.get('contract_type') != contract_type:
+                continue
+            hrs = self.employee_hours.get(eid)
+            if hrs is None:
+                continue
+            remaining = hrs['target_hours'] - hrs['completed_hours']
+            if remaining <= 0:
+                continue
+            candidates.append((eid, remaining))
+        candidates.sort(key=lambda x: x[1], reverse=True)
+        return [eid for eid, _ in candidates]
+
+
+    def select_eligible_employee_for_rh(self, pool, date, shift_id):
+        """Like select_eligible_employee_id, but additionally enforces the 11-hour rest
+        constraint against the previous day's assignment."""
+        while pool:
+            candidate = pool.pop()
+            if self.employee_hours[candidate]["completed_hours"] >= self.employee_hours[candidate]["target_hours"]:
+                continue
+            if candidate in self.assigned_employees_for_date.get(date, set()):
+                continue
+            if not self.is_11h_rest_satisfied(candidate, date, shift_id):
+                continue
+            return candidate
+        return None
+
+
     def get_shift_ids(self):
         """Returns a list of all active shift IDs."""
         return list(self.shifts.keys())

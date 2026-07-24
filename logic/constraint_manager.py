@@ -37,7 +37,7 @@ class ConstraintManager:
             "category": "Contract hours",
             "constraint_key": "Flexible",
             "constraint_value": "32.0",
-            "description": "MAXIMUM hours a flexible employee should work per week"
+            "description": "MAXIMUM hours a flexible employee should work per month"
         }
         holiday_region = {
             "category": "Holidays",

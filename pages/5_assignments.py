@@ -56,6 +56,28 @@ class AssignmentPage:
                 st.rerun()
 
 
+    def auto_assign_rh_section(self):
+        """Section for auto-assigning assistants (RH) to shifts for a specific month and year."""
+        st.info("Trigger the auto-assignment algorithm for shifts that require assistants (RH) in a specific month.")
+        now = datetime.datetime.now()
+        col_1, col_2 = st.columns(2)
+        with col_1:
+            rh_month = st.number_input("Month", min_value=1, max_value=12, value=now.month, step=1, key="rh_month")
+        with col_2:
+            rh_year = st.number_input("Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="rh_year")
+
+        if st.button("Fill Assistant Slots"):
+            success, message = self.schedule_manager.assign_rh_to_weekdays_shifts(rh_month, rh_year)
+            if success:
+                st.success(message)
+                time.sleep(1.5)
+                st.rerun()
+            else:
+                st.error(message)
+                time.sleep(1.5)
+                st.rerun()
+
+
     def display_schedule_section(self):
         """Section for displaying the generated shift assignments."""
         st.header("Current Assignments")
@@ -155,6 +177,8 @@ class AssignmentPage:
                 self.generate_empty_template_section()
             with st.expander("Auto Assign Paramedics", expanded=True):
                 self.auto_assign_section()
+            with st.expander("Fill Assistant Slots", expanded=True):
+                self.auto_assign_rh_section()
         
         col1, col2 = st.columns([5, 2], gap="small")
         with col1:
