@@ -95,11 +95,11 @@ class AssignmentPage:
         if df.empty:
             st.warning(f"No assignments found for {view_month}/{view_year}.")
         else:
-            # 1. Prepare options for the dropdowns
+            # 1. Prepare options for the dropdowns (only active employees)
             employees_df = self.staff_manager.get_all_employees()
-            employee_names = employees_df['name'].tolist() if not employees_df.empty else []
-            employee_names.insert(0, "Empty")
-            employee_names.append("-") 
+            active_df = employees_df[employees_df['is_active'] == True] if not employees_df.empty else employees_df
+            employee_names = active_df['name'].tolist() if not active_df.empty else []
+            employee_names.insert(0, "-")
 
             # 2. Build the Column Configuration dynamically
             column_config = {
@@ -161,6 +161,7 @@ class AssignmentPage:
                 df,
                 column_config={
                     "Employee": st.column_config.TextColumn("Employee", disabled=True),
+                    "Role": st.column_config.TextColumn("Role", disabled=True),
                     "Target Hours": st.column_config.NumberColumn("Target Hours", disabled=True),
                     "Completed Hours": st.column_config.NumberColumn("Completed Hours", disabled=True),
                 },
@@ -180,14 +181,15 @@ class AssignmentPage:
             with st.expander("Fill Assistant Slots", expanded=True):
                 self.auto_assign_rh_section()
         
-        col1, col2 = st.columns([5, 2], gap="small")
-        with col1:
+        tab1, tab2 = st.tabs(["Assignments", "Employee Hours"])
+        with tab1:
             with st.container(border=True):
                 self.display_schedule_section()
-        with col2:
-            # Main area: Assignments only
-            with st.container(border=True):
-                self.employee_hours_section()
+        with tab2:
+            left, _, _ = st.columns([2, 1, 1])
+            with left:
+                with st.container(border=True):
+                    self.employee_hours_section()
 
 
 if __name__ == "__main__":

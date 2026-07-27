@@ -207,8 +207,8 @@ class ScheduleManager:
         # Format date so the pivot column headers look nice
         df['date'] = pd.to_datetime(df['date']).dt.strftime('%d.%m.%Y - %A')
         
-        # Replace NaN with 'Empty' ONLY for slots that actually exist in the DB
-        df['employee_name'] = df['employee_name'].fillna("Empty")
+        # Replace NaN with '-' ONLY for slots that actually exist in the DB
+        df['employee_name'] = df['employee_name'].fillna("-")
         
         # Combine shift and role to create the column headers (e.g., "K1 - RS")
         df['shift_role'] = df['shift_name'] + ' - ' + df['role']
@@ -216,8 +216,8 @@ class ScheduleManager:
         # Pivot: rows = dates, columns = shift_role, values = employee_name
         pivot_df = df.pivot(index='date', columns='shift_role', values='employee_name')
         
-        # Replace NaN with '-' for cells created by the pivot (shifts that don't run that day)
-        pivot_df = pivot_df.fillna("-")
+        # Replace NaN with 'x' for cells created by the pivot (shifts that don't run that day)
+        pivot_df = pivot_df.fillna("x")
         
         # Reset index to make date a standard column
         pivot_df = pivot_df.reset_index()
@@ -234,6 +234,7 @@ class ScheduleManager:
             emp_name = dh.employees.get(emp_id, {}).get('name', f'ID {emp_id}')
             rows.append({
                 'Employee': emp_name,
+                'Role': dh.employees.get(emp_id, {}).get('qualification', '-'),
                 'Target Hours': hours['target_hours'],
                 'Completed Hours': hours['completed_hours']
             })
