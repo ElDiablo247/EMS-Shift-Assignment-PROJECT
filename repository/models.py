@@ -1,4 +1,4 @@
-from sqlalchemy import Column, Integer, String, Float, Time, Date, ForeignKey, Boolean, JSON
+from sqlalchemy import Column, Integer, String, Float, Time, Date, ForeignKey, Boolean, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, relationship
 
 
@@ -52,6 +52,10 @@ class Assignment(Base):
     # Hidden attributes that all assignment objects have, in case we need to use ORM to retreave data.
     employee = relationship('Employee', back_populates='assignments') 
     shift = relationship('Shift', back_populates='assignments')
+
+    __table_args__ = (
+        UniqueConstraint('date', 'shift_id', 'role', name='uq_assignment_date_shift_role')
+    )
 
 
 class Constraint(Base):
