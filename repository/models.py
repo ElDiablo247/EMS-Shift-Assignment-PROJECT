@@ -1,5 +1,5 @@
 from sqlalchemy import Column, Integer, String, Float, Time, Date, ForeignKey, Boolean, UniqueConstraint
-from sqlalchemy.orm import DeclarativeBase, relationship
+from sqlalchemy.orm import DeclarativeBase
 
 
 class Base(DeclarativeBase):
@@ -14,7 +14,6 @@ class Employee(Base):
     qualification = Column(String, nullable=False) 
     contract_type = Column(String, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
-    assignments = relationship('Assignment', back_populates='employee') # Hidden attribute that all employee objects have
 
 
 class Shift(Base):
@@ -27,7 +26,6 @@ class Shift(Base):
     shift_duration = Column(Float, nullable=False)
     runs_on_weekend_or_holiday = Column(Boolean, nullable=False)
     is_active = Column(Boolean, default=True, nullable=False)
-    assignments = relationship('Assignment', back_populates='shift') # Hidden attribute that all shift objects have
 
 
 class Admin(Base):
@@ -49,12 +47,8 @@ class Assignment(Base):
     role = Column(String, nullable=False)
     is_holidays = Column(Boolean, nullable=False)
 
-    # Hidden attributes that all assignment objects have, in case we need to use ORM to retreave data.
-    employee = relationship('Employee', back_populates='assignments') 
-    shift = relationship('Shift', back_populates='assignments')
-
     __table_args__ = (
-        UniqueConstraint('date', 'shift_id', 'role', name='uq_assignment_date_shift_role')
+        UniqueConstraint('date', 'shift_id', 'role', name='uq_assignment_date_shift_role'),
     )
 
 
