@@ -156,7 +156,7 @@ class ScheduleManager:
             if local_employee == 'empty':
                 local_employee = data_holder.select_eligible_employee_for_rh(employee_ids, date, shift_id)
                 if local_employee is None:
-                    break
+                    break  # No more eligible employees for this shift/week, leave the rest unassigned.
 
             data_holder.shifts_schedule[date][shift_id]["RH"] = local_employee
             data_holder.assigned_employees_for_date[date].add(local_employee)
@@ -216,13 +216,19 @@ class ScheduleManager:
         # Pivot: rows = dates, columns = shift_role, values = employee_name
         pivot_df = df.pivot(index='date', columns='shift_role', values='employee_name')
         
-        # Replace NaN with 'x' for cells created by the pivot (shifts that don't run that day)
-        pivot_df = pivot_df.fillna("x")
+        # Replace NaN with 'empty' for cells created by the pivot (shifts that don't run that day)
+        pivot_df = pivot_df.fillna("empty")
         
         # Reset index to make date a standard column
         pivot_df = pivot_df.reset_index()
         pivot_df.columns.name = None
-        
+
+        # Change order of columns so that they are sorted by shift name and then by role (RS before RH)
+        cols = list(pivot_df.columns)
+        shift_cols = [c for c in cols if c != 'date']
+        shift_cols.sort(key=lambda x: (x.split(' - ')[0], 0 if ' - RS' in x else 1))
+        pivot_df = pivot_df[['date'] + shift_cols]
+
         return pivot_df
 
 
@@ -236,7 +242,8 @@ class ScheduleManager:
                 'Employee': emp_name,
                 'Role': dh.employees.get(emp_id, {}).get('qualification', '-'),
                 'Target Hours': hours['target_hours'],
-                'Completed Hours': hours['completed_hours']
+                'Completed Hours': hours['completed_hours'],
+                'Remaining Hours': hours['target_hours'] - hours['completed_hours']
             })
         return pd.DataFrame(rows)
 

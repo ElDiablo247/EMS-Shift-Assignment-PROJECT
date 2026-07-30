@@ -106,18 +106,6 @@ class StaffManager:
         return self.dao.get_all_employees()
 
 
-    def delete_employee(self, emp_id):
-        if self.dao.delete_employee(emp_id):
-            return True, f"Employee with ID {emp_id} has been deleted."
-        return False, "Failed to delete employee. Please check the ID and try again."
-
-
-    def empty_employee_database(self):
-        if self.dao.empty_employee_database():
-            return True, "All employee data has been cleared."
-        return False, "Failed to clear employee data."
-
-
     def max_allowed_date(self):
         """Utility function to set the maximum allowed date for the date of birth field when adding employees."""
         today = datetime.today()

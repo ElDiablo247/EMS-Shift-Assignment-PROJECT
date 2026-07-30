@@ -88,6 +88,28 @@ class DeveloperPage:
                 st.error("Please click 'Load DataHolder' first.")
 
 
+    def full_schedule_section(self):
+        """One-click full schedule for testing — template → paramedics → assistants."""
+        st.header("Full Schedule Generator")
+        st.info("Generate empty template, assign paramedics, and assign assistants in one click.")
+        
+        now = datetime.datetime.now()
+        col1, col2 = st.columns(2)
+        with col1:
+            month = st.selectbox("Month", range(1, 13), index=now.month - 1, key="dev_full_month")
+        with col2:
+            year = st.number_input("Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="dev_full_year")
+        
+        if st.button("Generate Full Schedule"):
+            success, message = self.developer.dev_full_schedule_run(month, year)
+            if success:
+                st.success(message)
+            else:
+                st.error(message)
+            time.sleep(1.5)
+            st.rerun()
+
+
     def render_page(self):
         """Renders the developer tools page."""
         col1, col2 = st.columns([2, 2], gap="xlarge")
@@ -101,6 +123,8 @@ class DeveloperPage:
                 self.bulk_upload_section()
             with st.container(border=True):
                 self.delete_constraint_section()
+            with st.container(border=True):
+                self.full_schedule_section()
 
 
 if __name__ == "__main__":

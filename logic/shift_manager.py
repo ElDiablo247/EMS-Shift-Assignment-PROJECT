@@ -32,18 +32,6 @@ class ShiftManager:
         return self.dao.get_all_shifts()
 
 
-    def delete_shift(self, shift_id):
-        if self.dao.delete_shift(shift_id):
-            return True, f"Shift with ID {shift_id} has been deleted."
-        return False, "Failed to delete shift. Please check the ID and try again."
-
-
-    def empty_shifts_database(self):
-        if self.dao.empty_shifts_database():
-            return True, "All shifts have been cleared."
-        return False, "Failed to clear shift data."
-
-
     def update_shifts(self, shifts_df):
         if self.dao.update_shifts(shifts_df):
             return True, "Shift definitions updated successfully."

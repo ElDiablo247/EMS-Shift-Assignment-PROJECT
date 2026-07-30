@@ -32,25 +32,6 @@ class EmployeePage:
                 st.error(message)
 
 
-    def delete_employee_section(self):
-        """Section for deleting employees from the Database. This will only be used during development and will not be made available to users."""
-        with st.form("delete_employee_form", clear_on_submit=True):
-            id_to_delete = st.number_input("Employee ID", min_value=6001, step=1, key="delete_employee")
-            submitted = st.form_submit_button("Delete Employee")
-            if submitted:
-                if st.session_state.get('role') == 'basic':
-                    st.error('Only "super" admins are allowed to delete.')
-                    return
-                
-                success, message = self.staff_manager.delete_employee(id_to_delete)
-                if success:
-                    st.success(message)
-                    time.sleep(1.5)
-                    st.rerun()
-                else:
-                    st.error(message)
-
-
     def add_vacation_section(self):
         """Section for adding employee vacation."""
         employee_id = st.number_input("Employee ID", min_value=6001, step=1, key="vac_emp_id")
@@ -59,7 +40,7 @@ class EmployeePage:
             value=(datetime.date.today(), datetime.date.today() + datetime.timedelta(days=1)),
             min_value=datetime.date.today(),
             format="DD/MM/YYYY",
-            key="vac_dates"
+            key="vac_dates",
         )
         if st.button("Add Vacation"):
             if not isinstance(date_range, tuple) or len(date_range) != 2:
@@ -117,14 +98,6 @@ class EmployeePage:
         """Displays the employee data in an editable table format."""
         st.header("Staff Management")
         
-        if st.button("Wipe Employee Data", help="Danger: This will delete all employees."):
-            success, message = self.staff_manager.empty_employee_database()
-            if success:
-                st.success(message)
-                time.sleep(1.5)
-                st.rerun()
-            else:
-                st.error(message)
         personnel = self.staff_manager.get_all_employees()
         if personnel.empty:
             st.info("No staff registered yet. Use the sidebar to add employees.")
@@ -166,14 +139,34 @@ class EmployeePage:
             if df.empty:
                 st.info("No vacations registered.")
             else:
-                st.dataframe(df, use_container_width=True, hide_index=True)
-        
+                st.dataframe(
+                    df,
+                    column_config={
+                        "id": st.column_config.NumberColumn("ID", width="small"),
+                        "employee_name": st.column_config.TextColumn("Employee Name"),
+                        "start_date": st.column_config.DateColumn("Start Date", format="DD/MM/YYYY"),
+                        "end_date": st.column_config.DateColumn("End Date", format="DD/MM/YYYY"),
+                    },
+                    use_container_width=True,
+                    hide_index=True
+                )
+
         with tab2:
             df = self.staff_manager.get_all_sick_leaves_pivot()
             if df.empty:
                 st.info("No sick leaves registered.")
             else:
-                st.dataframe(df, use_container_width=True, hide_index=True)
+                st.dataframe(
+                    df,
+                    column_config={
+                        "id": st.column_config.NumberColumn("ID", width="small"),
+                        "employee_name": st.column_config.TextColumn("Employee Name"),
+                        "start_date": st.column_config.DateColumn("Start Date", format="DD/MM/YYYY"),
+                        "end_date": st.column_config.DateColumn("End Date", format="DD/MM/YYYY"),
+                    },
+                    use_container_width=True,
+                    hide_index=True
+                )
 
 
     def render_page(self):
@@ -182,8 +175,6 @@ class EmployeePage:
         with st.sidebar:
             with st.expander("Add Employee", expanded=False, ):
                 self.add_employee_section()
-            with st.expander("Delete Employee", expanded=False):
-                self.delete_employee_section()
             with st.expander("Register Vacation", expanded=False):
                 self.add_vacation_section()
             with st.expander("Delete Vacation", expanded=False):

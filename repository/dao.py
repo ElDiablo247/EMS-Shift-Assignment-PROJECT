@@ -77,36 +77,6 @@ class DatabaseAccess:
             return False
 
 
-    def delete_employee(self, emp_id):
-        """Deletes an employee from the database based on their ID."""
-        try:
-            with self.db.get_session() as session:
-                employee_to_delete = session.query(Employee).filter(Employee.id == emp_id).first()
-                if employee_to_delete:
-                    session.delete(employee_to_delete)
-                    return True
-                else:
-                    return False
-        except Exception as e:
-            print(f"Error deleting employee: {e}")
-            return False
-
-
-    def delete_shift(self, shift_id):
-        """Deletes a shift from the database based on its ID."""
-        try:
-            with self.db.get_session() as session:
-                shift_to_delete = session.query(Shift).filter(Shift.id == shift_id).first()
-                if shift_to_delete:
-                    session.delete(shift_to_delete)
-                    return True
-                else:
-                    return False
-        except Exception as e:
-            print(f"Error deleting shift: {e}")
-            return False
-
-
     def add_employee(self, emp_id, name, date_of_birth, qualification, contract_type):
         """
         Creates a new employee object and saves it to the database.
@@ -174,28 +144,6 @@ class DatabaseAccess:
         with self.db.get_session() as session:
             query = session.query(Admin).order_by(Admin.id)
             return pd.read_sql(query.statement, session.bind)
-
-
-    def empty_employee_database(self):
-        """Wipes all data from the employees table."""
-        try:
-            with self.db.get_session() as session:
-                session.query(Employee).delete()
-            return True
-        except Exception as e:
-            print(f"Error clearing Employees database: {e}")
-            return False
-
-
-    def empty_shifts_database(self):
-        """Wipes all data from the shifts table."""
-        try:
-            with self.db.get_session() as session:
-                session.query(Shift).delete()
-            return True
-        except Exception as e:
-            print(f"Error clearing Shifts database: {e}")
-            return False
 
 
     def get_last_employee_id(self):

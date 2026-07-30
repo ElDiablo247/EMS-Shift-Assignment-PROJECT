@@ -1,6 +1,7 @@
 from repository.dao import DatabaseAccess
 from datetime import datetime
 import json
+from logic.schedule_manager import ScheduleManager
 
 
 class Developer:
@@ -94,3 +95,25 @@ class Developer:
         if self.dao.dev_delete_constraint(constraint_id):
             return True, f"Constraint with ID {constraint_id} has been deleted."
         return False, "Failed to delete constraint. Please check the input and try again."
+
+
+    def dev_full_schedule_run(self, month, year):
+        """Runs all three scheduling steps at once for testing — template → paramedics → RH."""
+        sm = ScheduleManager()
+
+        # Step 1: empty template
+        success, message, _ = sm.generate_empty_template(month, year)
+        if not success:
+            return False, f"Template failed: {message}"
+
+        # Step 2: paramedics
+        success, message = sm.assign_paramedics_to_weekdays_shifts(month, year)
+        if not success:
+            return False, f"Paramedics failed: {message}"
+
+        # Step 3: assistants
+        success, message = sm.assign_rh_to_weekdays_shifts(month, year)
+        if not success:
+            return False, f"Assistants failed: {message}"
+
+        return True, f"Full schedule for {month}/{year} completed — template, paramedics, and assistants."

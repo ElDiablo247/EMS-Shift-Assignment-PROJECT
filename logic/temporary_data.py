@@ -315,7 +315,7 @@ class DataHolder:
         """Like select_eligible_employee_id, but additionally enforces the 11-hour rest
         constraint against the previous day's assignment."""
         while pool:
-            candidate = pool.pop()
+            candidate = pool.pop(0)
             if self.employee_hours[candidate]["completed_hours"] >= self.employee_hours[candidate]["target_hours"]:
                 continue
             if candidate in self.assigned_employees_for_date.get(date, set()):

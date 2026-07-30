@@ -53,14 +53,6 @@ class ShiftPage:
         """Displays the shift data in an editable table format."""
         st.header("Shift Management")
         
-        if st.button("Clear All Shifts"):
-            success, message = self.shift_manager.empty_shifts_database()
-            if success:
-                st.success(message)
-                time.sleep(1.5)
-                st.rerun()
-            else:
-                st.error(message)
         shifts = self.shift_manager.get_all_shifts()
         if shifts.empty:
             st.info("No shifts defined. Use the sidebar to add them.")
@@ -98,8 +90,6 @@ class ShiftPage:
         with st.sidebar:
             with st.expander("Add Shift", expanded=True):
                 self.add_shift_section()
-            with st.expander("Delete Shift", expanded=False):
-                self.delete_shift_section()
         
         # Main area: Display only 
         with st.container(border=True):
