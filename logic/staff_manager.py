@@ -1,5 +1,6 @@
 from repository.dao import DatabaseAccess
 from datetime import datetime
+from datetime import timedelta
 
 
 class StaffManager:
@@ -32,7 +33,7 @@ class StaffManager:
 
 
     def add_vacation(self, employee_id, start_date, end_date):
-        """Validates input and calls DAO to insert vacation."""
+        """Expands the date range into individual dates and inserts one row per date."""
         if not employee_id:
             return False, "Validation failed: Employee ID is missing."
         if not start_date:
@@ -40,9 +41,16 @@ class StaffManager:
         if not end_date:
             return False, "Validation failed: End date is missing."
         
-        success = self.dao.insert_vacation(employee_id, start_date, end_date)
-        if success:
-            return True, "Vacation added successfully."
+        from datetime import timedelta
+        current = start_date
+        count = 0
+        while current <= end_date:
+            if self.dao.insert_vacation(employee_id, current):
+                count += 1
+            current += timedelta(days=1)
+        
+        if count > 0:
+            return True, f"{count} vacation day(s) added successfully."
         else:
             return False, "Error adding vacation. Please try again."
 
@@ -60,7 +68,7 @@ class StaffManager:
 
 
     def add_sick_leave(self, employee_id, start_date, end_date):
-        """Validates input and calls DAO to insert a sick leave for an employee"""
+        """Expands the date range into individual dates and inserts one row per date."""
         if not employee_id:
             return False, "Validation failed: Employee ID is missing."
         if not start_date:
@@ -68,9 +76,15 @@ class StaffManager:
         if not end_date:
             return False, "Validation failed: End date is missing."
         
-        success = self.dao.insert_sick_leave(employee_id, start_date, end_date)
-        if success:
-            return True, "Sick leave added successfully."
+        current = start_date
+        count = 0
+        while current <= end_date:
+            if self.dao.insert_sick_leave(employee_id, current):
+                count += 1
+            current += timedelta(days=1)
+        
+        if count > 0:
+            return True, f"{count} sick leave day(s) added successfully."
         else:
             return False, "Error adding sick leave. Please try again."
 
@@ -82,7 +96,7 @@ class StaffManager:
         employees_df = self.dao.get_all_employees()
         name_map = dict(zip(employees_df['id'], employees_df['name']))
         df['employee_name'] = df['employee_id'].map(name_map)
-        return df[['id', 'employee_name', 'start_date', 'end_date']]
+        return df[['id', 'employee_name', 'vacation_date']]
 
 
     def get_all_sick_leaves_pivot(self):
@@ -92,7 +106,7 @@ class StaffManager:
         employees_df = self.dao.get_all_employees()
         name_map = dict(zip(employees_df['id'], employees_df['name']))
         df['employee_name'] = df['employee_id'].map(name_map)
-        return df[['id', 'employee_name', 'start_date', 'end_date']]
+        return df[['id', 'employee_name', 'sick_leave_date']]
 
 
     def update_employees(self, employees_df):

@@ -464,14 +464,13 @@ class DatabaseAccess:
             return False
 
 
-    def insert_vacation(self, employee_id, start_date, end_date):
-        """Inserts a vacation record into the database."""
+    def insert_vacation(self, employee_id, vacation_date):
+        """Inserts a single vacation date into the database."""
         try:
             with self.db.get_session() as session:
                 new_vacation = Vacation(
                     employee_id=employee_id,
-                    start_date=start_date,
-                    end_date=end_date
+                    vacation_date=vacation_date
                 )
                 session.add(new_vacation)
             return True
@@ -496,14 +495,13 @@ class DatabaseAccess:
             return False
 
 
-    def insert_sick_leave(self, employee_id, start_date, end_date):
-        """Inserts a sick leave record into the database."""
+    def insert_sick_leave(self, employee_id, sick_leave_date):
+        """Inserts a single sick leave date into the database."""
         try:
             with self.db.get_session() as session:
                 new_sick_leave = SickLeave(
                     employee_id=employee_id,
-                    start_date=start_date,
-                    end_date=end_date
+                    sick_leave_date=sick_leave_date
                 )
                 session.add(new_sick_leave)
             return True
@@ -515,7 +513,7 @@ class DatabaseAccess:
     def get_all_vacations(self):
         try:
             with self.db.get_session() as session:
-                query = session.query(Vacation).order_by(Vacation.start_date)
+                query = session.query(Vacation).order_by(Vacation.vacation_date)
                 return pd.read_sql(query.statement, session.bind)
         except Exception as e:
             print(f"Error retrieving vacations: {e}")
@@ -525,7 +523,7 @@ class DatabaseAccess:
     def get_all_sick_leaves(self):
         try:
             with self.db.get_session() as session:
-                query = session.query(SickLeave).order_by(SickLeave.start_date)
+                query = session.query(SickLeave).order_by(SickLeave.sick_leave_date)
                 return pd.read_sql(query.statement, session.bind)
         except Exception as e:
             print(f"Error retrieving sick leaves: {e}")

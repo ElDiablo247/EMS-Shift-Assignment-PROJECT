@@ -50,9 +50,11 @@ class ScheduleManager:
         holidays_df = self.dao.get_all_holidays(year)
         employees_df = self.dao.get_all_employees()
         assignments_df = self.dao.get_assignments_for_month(month, year)
+        vacations_df = self.dao.get_all_vacations()
+        sick_leaves_df = self.dao.get_all_sick_leaves()
         ft_hours = self.dao.get_single_constraint("Contract hours", "Full-time 100%")
         ft_hours = float(ft_hours) if ft_hours else 42.5   # convert string to float
-        data_holder.set_up_data_holder(month, year, holidays_df, shifts_df, employees_df, assignments_df, ft_hours)
+        data_holder.set_up_data_holder(month, year, holidays_df, shifts_df, employees_df, assignments_df, vacations_df, sick_leaves_df, ft_hours)
         return data_holder
 
 
@@ -103,7 +105,10 @@ class ScheduleManager:
                 local_employee = data_holder.select_eligible_employee_id(employee_ids, date)
                 if local_employee is None: 
                     break # This means there are no more eligible employees at all so the rest of the week will remain unassigned for this shift.
-            
+            if local_employee != 'empty' and data_holder.is_on_leave(local_employee, date):
+                local_employee = 'empty'
+                continue
+
             data_holder.shifts_schedule[date][shift_id]["RS"] = local_employee
             data_holder.assigned_employees_for_date[date].add(local_employee) 
             data_holder.employee_hours[local_employee]["completed_hours"] += data_holder.shifts[shift_id]["shift_duration"]
@@ -157,6 +162,9 @@ class ScheduleManager:
                 local_employee = data_holder.select_eligible_employee_for_rh(employee_ids, date, shift_id)
                 if local_employee is None:
                     break  # No more eligible employees for this shift/week, leave the rest unassigned.
+            if local_employee != 'empty' and data_holder.is_on_leave(local_employee, date):
+                local_employee = 'empty'
+                continue
 
             data_holder.shifts_schedule[date][shift_id]["RH"] = local_employee
             data_holder.assigned_employees_for_date[date].add(local_employee)

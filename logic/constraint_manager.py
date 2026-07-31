@@ -57,7 +57,18 @@ class ConstraintManager:
             "constraint_value": 48,
             "description": "This is the maximum hours an employee can work per week"
         }
-
+        absence_vacation_credited_hours = {
+            "category": "Absence credited hours",
+            "constraint_key": "Vacation",
+            "constraint_value": None,
+            "description": "Hours credited for vacation absence (Dividing full-time hours by number of weekdays, gives the daily hours credited for vacation absence)"
+        }
+        absence_sick_leave_credited_hours = {
+            "category": "Absence credited hours",
+            "constraint_key": "Sick Leave",
+            "constraint_value": 8,
+            "description": "Hours credited for sick leave absence (The duration of the shift is credited for sick leave absence)"
+        }
         constraints_list = [
             fulltime_contract_100,
             parttime_contract_75,
@@ -65,7 +76,7 @@ class ConstraintManager:
             flexible_contract,
             holiday_region,
             break_between_shifts,
-            weekly_max_hours,
+            weekly_max_hours
         ]
 
         if self.dao.populate_constraints(constraints_list):
