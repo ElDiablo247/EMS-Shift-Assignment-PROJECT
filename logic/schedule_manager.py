@@ -27,10 +27,14 @@ class ScheduleManager:
             data_holder.shifts_schedule[date] = {} 
             if date in data_holder.holidays or date.weekday() >= 5: # If current date is a Holiday or weekend
                 for shift_id, values in data_holder.shifts.items(): # Itterate over all shifts
+                    if not values.get('is_active', True):
+                        continue
                     if values['runs_on_weekend_or_holiday'] == True: # If the shift runs on holidays/weekends, create an entry for it.
                         data_holder.shifts_schedule[date][shift_id] = {"RS": None, "RH": None}
             else: # Else if current date is a Weekday
-                for shift_id in data_holder.shifts: # Create entries for all shifts on weekdays
+                for shift_id, values in data_holder.shifts.items(): # Create entries for all shifts on weekdays
+                    if not values.get('is_active', True):
+                        continue
                     data_holder.shifts_schedule[date][shift_id] = {"RS": None, "RH": None}
         
         # 4. Map the weekday dates to their respective weeks (e.g., 1st week of the month, 2nd week of the month, etc.)
@@ -241,14 +245,27 @@ class ScheduleManager:
 
 
     def get_employee_hours_pivot(self, month, year):
-        """Builds an employee hours DataFrame from a fresh DataHolder."""
+        """Builds an employee hours DataFrame from a fresh DataHolder.
+        Shows active employees, plus any inactive ones who still appear in this month's schedule."""
         dh = self.generate_data_holder(month, year)
+
+        # Collect IDs of employees who have at least one assignment this month
+        scheduled_ids = set()
+        for date_shifts in dh.shifts_schedule.values():
+            for roles in date_shifts.values():
+                for emp_id in roles.values():
+                    if emp_id is not None:
+                        scheduled_ids.add(emp_id)
+
         rows = []
         for emp_id, hours in dh.employee_hours.items():
-            emp_name = dh.employees.get(emp_id, {}).get('name', f'ID {emp_id}')
+            emp_data = dh.employees.get(emp_id, {})
+            is_active = emp_data.get('is_active', True)
+            if not is_active and emp_id not in scheduled_ids:
+                continue
             rows.append({
-                'Employee': emp_name,
-                'Role': dh.employees.get(emp_id, {}).get('qualification', '-'),
+                'Employee': emp_data.get('name', f'ID {emp_id}'),
+                'Role': emp_data.get('qualification', '-'),
                 'Target Hours': hours['target_hours'],
                 'Completed Hours': hours['completed_hours'],
                 'Remaining Hours': hours['target_hours'] - hours['completed_hours']
@@ -262,7 +279,7 @@ class ScheduleManager:
         # Fetch employees to map names back to IDs
         employees_df = self.dao.get_all_employees()
         emp_name_to_id = dict(zip(employees_df['name'], employees_df['id']))
-        emp_name_to_id['Empty'] = None
+        emp_name_to_id['-'] = None
         
         # Fetch shifts to map shift_name back to shift_id
         shifts_df = self.dao.get_all_shifts()
@@ -273,7 +290,7 @@ class ScheduleManager:
         melted_df = edited_df.melt(id_vars=['date'], value_vars=shift_role_columns, var_name='shift_role_str', value_name='employee_name')
         
         # Filter out cells that were filled with "-" (Days where a specific shift doesn't run)
-        melted_df = melted_df[melted_df['employee_name'] != '-']
+        melted_df = melted_df[melted_df['employee_name'] != 'empty']
         
         updates_list = []
         for _, row in melted_df.iterrows():

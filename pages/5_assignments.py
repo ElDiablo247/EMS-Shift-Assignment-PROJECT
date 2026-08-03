@@ -95,10 +95,9 @@ class AssignmentPage:
         if df.empty:
             st.warning(f"No assignments found for {view_month}/{view_year}.")
         else:
-            # 1. Prepare options for the dropdowns (only active employees)
+            # 1. Prepare options for the dropdowns (all employees, including inactive for past schedules)
             employees_df = self.staff_manager.get_all_employees()
-            active_df = employees_df[employees_df['is_active'] == True] if not employees_df.empty else employees_df
-            employee_names = active_df['name'].tolist() if not active_df.empty else []
+            employee_names = employees_df['name'].tolist() if not employees_df.empty else []
             employee_names.insert(0, "-")
 
             # 2. Build the Column Configuration dynamically

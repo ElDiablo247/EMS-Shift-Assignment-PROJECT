@@ -49,17 +49,15 @@ class DataHolder:
 
 
     def _store_employees(self, df):
-        """Converts the employees DataFrame to a dictionary indexed by ID, keeping only active employees."""
+        """Converts the employees DataFrame to a dictionary indexed by ID. Stores ALL employees, active and inactive."""
         if not df.empty and 'id' in df.columns:
-            active_df = df[df['is_active'] == True]
-            self.employees = active_df.set_index('id').to_dict('index')
+            self.employees = df.set_index('id').to_dict('index')
 
 
     def _store_shifts(self, df):
-        """Converts the shifts DataFrame to a dictionary indexed by ID, keeping only active shifts."""
+        """Converts the shifts DataFrame to a dictionary indexed by ID. Stores ALL shifts, active and inactive."""
         if not df.empty and 'id' in df.columns:
-            active_df = df[df['is_active'] == True]
-            self.shifts = active_df.set_index('id').to_dict('index') 
+            self.shifts = df.set_index('id').to_dict('index')
 
 
     def _store_shift_schedule(self, df):
@@ -255,6 +253,10 @@ class DataHolder:
                     for role in ('RS', 'RH'):
                         prev_emp = self.prev_month_shift_pattern[shift_id].get(role)
                         if prev_emp is not None:
+                            if not self.employees.get(prev_emp, {}).get('is_active', True):
+                                continue
+                            if self.employees.get(prev_emp, {}).get('contract_type') == 'Flexible':
+                                continue
                             if self.shifts_schedule[date][shift_id].get(role) is None:
                                 self.shifts_schedule[date][shift_id][role] = prev_emp
                                 self.employee_hours[prev_emp]["completed_hours"] += self.shifts[shift_id]["shift_duration"]
@@ -264,7 +266,9 @@ class DataHolder:
     def get_paramedic_ids_by_contract(self, contract_type):
         """This function returns a list of employee IDs who match the specified contract type and have the qualification 'RS' (paramedic)."""
         return [eid for eid, emp in self.employees.items()
-                if emp.get('contract_type') == contract_type and emp.get('qualification') == 'RS']
+                if emp.get('is_active') == True
+                and emp.get('contract_type') == contract_type 
+                and emp.get('qualification') == 'RS']
 
 
     def select_eligible_employee_id(self, pool, date):
@@ -338,6 +342,8 @@ class DataHolder:
         descending (most remaining first). Excludes employees already at or over target."""
         candidates = []
         for eid, emp in self.employees.items():
+            if not emp.get('is_active', True):
+                continue
             if emp.get('contract_type') != contract_type:
                 continue
             hrs = self.employee_hours.get(eid)
