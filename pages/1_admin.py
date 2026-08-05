@@ -78,7 +78,7 @@ class AdminPage:
                 self.delete_admin_section()
         
         # Main area: Display only 
-        with st.container(border=True):
+        with st.container(border=True, width='content'):
             self.display_admins_table()
 
 

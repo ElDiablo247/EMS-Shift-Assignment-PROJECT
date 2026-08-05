@@ -200,46 +200,42 @@ class ScheduleManager:
 
     def get_assignments_pivot(self, month, year):
         """Fetches assignments for a month and pivots them into a wide format for the UI."""
+        self._current_view_year = year
+        
         df = self.dao.get_assignments_for_month(month, year)
         if df.empty:
             return df
         
-        # Fetch related data to perform the joins in-memory
         shifts_df = self.dao.get_all_shifts()
         employees_df = self.dao.get_all_employees()
         
-        # Map shift_id to shift_name using a dictionary
+        active_shift_ids = set(shifts_df[shifts_df['is_active'] == True]['id'])
+        df = df[df['shift_id'].isin(active_shift_ids)]
+        if df.empty:
+            return df
+        
         shift_name_map = dict(zip(shifts_df['id'], shifts_df['shift_name']))
         df['shift_name'] = df['shift_id'].map(shift_name_map)
         
-        # Map employee_id to employee name
         emp_name_map = dict(zip(employees_df['id'], employees_df['name']))
         df['employee_name'] = df['employee_id'].map(emp_name_map)
         
-        # Format date so the pivot column headers look nice
-        df['date'] = pd.to_datetime(df['date']).dt.strftime('%d.%m.%Y - %A')
-        
-        # Replace NaN with '-' ONLY for slots that actually exist in the DB
+        df['date'] = pd.to_datetime(df['date']).dt.strftime('%d.%m - %a')
         df['employee_name'] = df['employee_name'].fillna("-")
         
-        # Combine shift and role to create the column headers (e.g., "K1 - RS")
         df['shift_role'] = df['shift_name'] + ' - ' + df['role']
         
         # Pivot: rows = dates, columns = shift_role, values = employee_name
         pivot_df = df.pivot(index='date', columns='shift_role', values='employee_name')
-        
-        # Replace NaN with 'empty' for cells created by the pivot (shifts that don't run that day)
         pivot_df = pivot_df.fillna("empty")
-        
-        # Reset index to make date a standard column
+
+        # Sort columns by shift name then role (RS before RH)
+        cols = list(pivot_df.columns)
+        cols.sort(key=lambda x: (x.split(' - ')[0], 0 if ' - RS' in x else 1))
+        pivot_df = pivot_df[cols]
+
         pivot_df = pivot_df.reset_index()
         pivot_df.columns.name = None
-
-        # Change order of columns so that they are sorted by shift name and then by role (RS before RH)
-        cols = list(pivot_df.columns)
-        shift_cols = [c for c in cols if c != 'date']
-        shift_cols.sort(key=lambda x: (x.split(' - ')[0], 0 if ' - RS' in x else 1))
-        pivot_df = pivot_df[['date'] + shift_cols]
 
         return pivot_df
 
@@ -276,30 +272,28 @@ class ScheduleManager:
     def save_edited_assignments(self, edited_df):
         """Translates the edited UI grid back into database updates (un-pivot)."""
         
-        # Fetch employees to map names back to IDs
         employees_df = self.dao.get_all_employees()
         emp_name_to_id = dict(zip(employees_df['name'], employees_df['id']))
         emp_name_to_id['-'] = None
         
-        # Fetch shifts to map shift_name back to shift_id
         shifts_df = self.dao.get_all_shifts()
         shift_name_to_id = dict(zip(shifts_df['shift_name'], shifts_df['id']))
         
         # Melt the dataframe (un-pivot)
-        shift_role_columns = [col for col in edited_df.columns if col != 'date']
-        melted_df = edited_df.melt(id_vars=['date'], value_vars=shift_role_columns, var_name='shift_role_str', value_name='employee_name')
+        date_columns = [col for col in edited_df.columns if col != 'date']
+        melted_df = edited_df.melt(id_vars=['date'], value_vars=date_columns, var_name='shift_role_str', value_name='employee_name')
         
-        # Filter out cells that were filled with "-" (Days where a specific shift doesn't run)
+        # Filter out slots where the shift doesn't run (marked "empty")
         melted_df = melted_df[melted_df['employee_name'] != 'empty']
         
         updates_list = []
         for _, row in melted_df.iterrows():
-            # Split the column header back into shift name and role
             shift_name, role = row['shift_role_str'].split(' - ')
             
-            # Convert date string back to actual date object
+            # Convert date string back to actual date object (format: "01.08 - Mon")
             date_str = row['date'].split(' - ')[0]
-            date_obj = datetime.datetime.strptime(date_str, '%d.%m.%Y').date()
+            day, month = date_str.split('.')
+            date_obj = datetime.date(self._current_view_year, int(month), int(day))
             shift_id = shift_name_to_id.get(shift_name)
             
             if shift_id:
@@ -311,3 +305,106 @@ class ScheduleManager:
                 })
                 
         return self.dao.update_monthly_assignments(updates_list), "Schedule saved successfully!"
+
+
+    def find_schedule_violations(self, month, year):
+        """Runs all constraint checks on the schedule and returns a list of violation dicts."""
+        dh = self.generate_data_holder(month, year)
+
+        violations = []
+        violations.extend(self.check_11_hour_violation(dh))
+        violations.extend(self.check_double_shifts_violation(dh))
+        violations.extend(self.check_vacation_violation(dh))
+        violations.extend(self.check_shifts_have_paramedic_violation(dh))
+        return violations
+
+
+    def check_double_shifts_violation(self, dh):
+        """Violations where an employee is assigned to multiple shifts on the same day."""
+        violations = []
+
+        for date_val, shifts in dh.shifts_schedule.items():
+            emp_roles = {}
+            for shift_id, roles in shifts.items():
+                shift_name = dh.shifts.get(shift_id, {}).get('shift_name', '?')
+                for role, emp_id in roles.items():
+                    if emp_id is not None:
+                        emp_roles.setdefault(emp_id, []).append(f"{shift_name}-{role}")
+
+            for emp_id, assigned in emp_roles.items():
+                if len(assigned) > 1:
+                    name = dh.employees.get(emp_id, {}).get('name', f'ID {emp_id}')
+                    violations.append({
+                        'Date': date_val.strftime('%d.%m.%Y'),
+                        'Shift': ', '.join(assigned),
+                        'Employee': name,
+                        'Type': 'Double shift',
+                        'Description': f'{name} assigned to {", ".join(assigned)} on same day'
+                    })
+
+        return violations
+
+
+    def check_shifts_have_paramedic_violation(self, dh):
+        """Violations where a shift has no paramedic (RS) assigned."""
+        violations = []
+
+        for date_val, shifts in dh.shifts_schedule.items():
+            for shift_id, roles in shifts.items():
+                if roles.get('RS') is None:
+                    shift_name = dh.shifts.get(shift_id, {}).get('shift_name', '?')
+                    violations.append({
+                        'Date': date_val.strftime('%d.%m.%Y'),
+                        'Shift': shift_name,
+                        'Employee': '-',
+                        'Type': 'Missing paramedic',
+                        'Description': f'{shift_name} has no RS assigned'
+                    })
+
+        return violations
+
+
+    def check_11_hour_violation(self, dh):
+        """Violations where an employee has < 11h rest between consecutive-day shifts."""
+        violations = []
+
+        for date_val, shifts in dh.shifts_schedule.items():
+            for shift_id, roles in shifts.items():
+                if shift_id not in dh.shifts:
+                    continue
+                shift_name = dh.shifts.get(shift_id, {}).get('shift_name', '?')
+                for role, emp_id in roles.items():
+                    if emp_id is None:
+                        continue
+                    if not dh.is_11h_rest_satisfied(emp_id, date_val, shift_id):
+                        name = dh.employees.get(emp_id, {}).get('name', f'ID {emp_id}')
+                        violations.append({
+                            'Date': date_val.strftime('%d.%m.%Y'),
+                            'Shift': f'{shift_name}-{role}',
+                            'Employee': name,
+                            'Type': '11-hour rest',
+                            'Description': f'{name} has less than 11h rest before {shift_name}-{role}'
+                        })
+
+        return violations
+
+
+    def check_vacation_violation(self, dh):
+        """Violations where an employee is assigned on a day they are on vacation or sick leave."""
+        violations = []
+
+        for date_val, shifts in dh.shifts_schedule.items():
+            for shift_id, roles in shifts.items():
+                shift_name = dh.shifts.get(shift_id, {}).get('shift_name', '?')
+                for role, emp_id in roles.items():
+                    if emp_id is not None and dh.is_on_leave(emp_id, date_val):
+                        name = dh.employees.get(emp_id, {}).get('name', f'ID {emp_id}')
+                        violations.append({
+                            'Date': date_val.strftime('%d.%m.%Y'),
+                            'Shift': f'{shift_name}-{role}',
+                            'Employee': name,
+                            'Type': 'On leave',
+                            'Description': f'{name} is on leave but assigned to {shift_name}-{role}'
+                        })
+
+        return violations

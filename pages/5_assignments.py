@@ -116,7 +116,7 @@ class AssignmentPage:
                     column_config=column_config, 
                     use_container_width=True, 
                     hide_index=True, 
-                    height=1200,
+                    height='content',
                     key="monthly_assignments_editor"
                 )
                 
@@ -170,6 +170,48 @@ class AssignmentPage:
             )
 
 
+    def violations_section(self):
+        """Section for scanning the schedule for constraint violations."""
+        st.header("Violations")
+        st.info("Scan for constraint violations (11-hour rest, double shifts, vacations, missing paramedics).")
+
+        now = datetime.datetime.now()
+        col1, col2, col3 = st.columns([1, 1, 2])
+        with col1:
+            v_month = st.selectbox("Month", range(1, 13), index=now.month - 1, key="v_month")
+        with col2:
+            v_year = st.number_input("Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="v_year")
+        with col3:
+            if st.button("Find Constraint Violations", use_container_width=True, key="v_button"):
+                with st.spinner("Scanning schedule..."):
+                    violations = self.schedule_manager.find_schedule_violations(v_month, v_year)
+                if violations:
+                    st.session_state["violations_result"] = violations
+                else:
+                    st.session_state["violations_result"] = []
+
+        result = st.session_state.get("violations_result", None)
+        if result is None:
+            return
+        if result:
+            st.error(f"Found {len(result)} violation(s):")
+            st.dataframe(
+                result,
+                column_config={
+                    "Date": st.column_config.TextColumn("Date"),
+                    "Shift": st.column_config.TextColumn("Shift"),
+                    "Employee": st.column_config.TextColumn("Employee"),
+                    "Type": st.column_config.TextColumn("Type"),
+                    "Description": st.column_config.TextColumn("Description"),
+                },
+                use_container_width=True,
+                width='content',
+                hide_index=True,
+            )
+        else:
+            st.success("No violations found — schedule is clean!")
+
+
     def render_page(self):
         """Renders the assignments management page."""
         with st.sidebar:
@@ -180,15 +222,16 @@ class AssignmentPage:
             with st.expander("Fill Assistant Slots", expanded=True):
                 self.auto_assign_rh_section()
         
-        tab1, tab2 = st.tabs(["Assignments", "Employee Hours"])
-        with tab1:
+        with st.container(border=True):
+            self.display_schedule_section()
+
+        left, right = st.columns([7, 5])
+        with left:
             with st.container(border=True):
-                self.display_schedule_section()
-        with tab2:
-            left, _, _ = st.columns([2, 1, 1])
-            with left:
-                with st.container(border=True):
-                    self.employee_hours_section()
+                self.violations_section()
+        with right:
+            with st.container(border=True):
+                self.employee_hours_section()
 
 
 if __name__ == "__main__":
