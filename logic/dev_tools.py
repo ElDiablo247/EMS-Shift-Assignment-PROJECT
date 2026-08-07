@@ -117,3 +117,11 @@ class Developer:
             return False, f"Assistants failed: {message}"
 
         return True, f"Full schedule for {month}/{year} completed — template, paramedics, and assistants."
+
+
+    def dev_delete_assignments_for_month(self, month, year):
+        """Permanently deletes all assignment records for a specific month and year."""
+        success, count = self.dao.dev_delete_assignments_for_month(month, year)
+        if success:
+            return True, f"Successfully deleted {count} assignment(s) for {month}/{year}."
+        return False, "Database error: Failed to delete assignments."

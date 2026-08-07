@@ -63,31 +63,6 @@ class DeveloperPage:
                     st.error(message)
 
 
-    def dataholder_test_section(self):
-        """Section to instantiate DataHolder and test its dictionaries."""
-        st.header("DataHolder Tester")
-        st.info("Load the DataHolder for a specific month and print its data to the console.")
-        
-        now = datetime.datetime.now()
-        col1, col2 = st.columns(2)
-        with col1:
-            month = st.number_input("Test Month", min_value=1, max_value=12, value=now.month, step=1, key="dh_test_month")
-        with col2:
-            year = st.number_input("Test Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="dh_test_year")
-            
-        if st.button("Load DataHolder"):
-            dh = self.schedule_manager.load_data_for_assignment(month, year)
-            st.session_state['test_dataholder'] = dh
-            st.success(f"DataHolder for {month}/{year} initialized and saved in memory.")
-            
-        if st.button("Print Dictionaries to UI"):
-            if 'test_dataholder' in st.session_state:
-                debug_str = st.session_state['test_dataholder'].get_debug_string()
-                st.code(debug_str, language="plaintext")
-            else:
-                st.error("Please click 'Load DataHolder' first.")
-
-
     def full_schedule_section(self):
         """One-click full schedule for testing — template → paramedics → assistants."""
         st.header("Full Schedule Generator")
@@ -110,6 +85,28 @@ class DeveloperPage:
             st.rerun()
 
 
+    def delete_DB_assignments(self):
+        """Widget to permanently delete all assignments for a selected month and year."""
+        st.header("Delete DB Assignments")
+        st.warning("⚠️ This permanently removes all schedule data for the selected month and year.")
+        
+        now = datetime.datetime.now()
+        col1, col2 = st.columns(2)
+        with col1:
+            month = st.selectbox("Month", range(1, 13), index=now.month - 1, key="del_month")
+        with col2:
+            year = st.number_input("Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="del_year")
+
+        if st.button("Delete Assignments", type="primary"):
+            success, message = self.developer.dev_delete_assignments_for_month(month, year)
+            if success:
+                st.success(message)
+            else:
+                st.error(message)
+            time.sleep(1.5)
+            st.rerun()
+
+
     def render_page(self):
         """Renders the developer tools page."""
         col1, col2 = st.columns([2, 2], gap="xlarge")
@@ -117,7 +114,7 @@ class DeveloperPage:
             with st.container(border=True):
                 self.add_constraint_section()
             with st.container(border=True):
-                self.dataholder_test_section()
+                self.delete_DB_assignments()
         with col2:
             with st.container(border=True):
                 self.bulk_upload_section()

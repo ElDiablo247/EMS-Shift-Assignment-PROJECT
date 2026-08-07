@@ -277,35 +277,6 @@ class DatabaseAccess:
             return None
 
 
-    def dev_add_constraint(self, category, key, value, description):
-        """Directly inserts a single constraint (Developer tool)."""
-        try:
-            with self.db.get_session() as session:
-                new_constraint = Constraint(
-                    category=category,
-                    constraint_key=key,
-                    constraint_value=value,
-                    description=description
-                )
-                session.add(new_constraint)
-            return True
-        except Exception as e:
-            print(f"Error dev inserting constraint: {e}")
-            return False
-
-
-    def dev_delete_constraint(self, constraint_id):
-        """Developer tool to delete constraints by ID."""
-        try:
-            with self.db.get_session() as session:
-                constraint_to_delete = session.query(Constraint).filter(Constraint.id == constraint_id).first()
-                session.delete(constraint_to_delete)
-            return True
-        except Exception as e:
-            print(f"Error deleting constraint: {e}")
-            return False
-
-
     def insert_holiday(self, year, date, name):
         """Inserts a holiday into the holidays table."""
         try:
@@ -528,3 +499,51 @@ class DatabaseAccess:
         except Exception as e:
             print(f"Error retrieving sick leaves: {e}")
             return pd.DataFrame()
+
+
+# Below are Developer Functions only, meant for the developer.
+
+    def dev_add_constraint(self, category, key, value, description):
+        """Directly inserts a single constraint (Developer tool)."""
+        try:
+            with self.db.get_session() as session:
+                new_constraint = Constraint(
+                    category=category,
+                    constraint_key=key,
+                    constraint_value=value,
+                    description=description
+                )
+                session.add(new_constraint)
+            return True
+        except Exception as e:
+            print(f"Error dev inserting constraint: {e}")
+            return False
+
+
+    def dev_delete_constraint(self, constraint_id):
+        """Developer tool to delete constraints by ID."""
+        try:
+            with self.db.get_session() as session:
+                constraint_to_delete = session.query(Constraint).filter(Constraint.id == constraint_id).first()
+                session.delete(constraint_to_delete)
+            return True
+        except Exception as e:
+            print(f"Error deleting constraint: {e}")
+            return False
+
+
+    def dev_delete_assignments_for_month(self, month, year):
+        """Permanently deletes ALL assignment rows for a given month and year."""
+        _, num_days = calendar.monthrange(year, month)
+        start_date = datetime.date(year, month, 1)
+        end_date = datetime.date(year, month, num_days)
+        try:
+            with self.db.get_session() as session:
+                deleted = session.query(Assignment).filter(
+                    Assignment.date >= start_date,
+                    Assignment.date <= end_date
+                ).delete(synchronize_session='fetch')
+                return True, deleted
+        except Exception as e:
+            print(f"Error deleting assignments for {month}/{year}: {e}")
+            return False, 0
