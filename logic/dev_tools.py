@@ -103,17 +103,17 @@ class Developer:
         sm = ScheduleManager()
 
         # Step 1: empty template
-        success, message, _ = sm.generate_empty_template(month, year)
+        success, message, _ = sm.generate_template(month, year)
         if not success:
             return False, f"Template failed: {message}"
 
         # Step 2: paramedics
-        success, message = sm.assign_paramedics_to_weekdays_shifts(month, year)
+        success, message = sm.assign_paramedics(month, year)
         if not success:
             return False, f"Paramedics failed: {message}"
 
         # Step 3: assistants
-        success, message = sm.assign_rh_to_weekdays_shifts(month, year)
+        success, message = sm.assign_rest_of_employees(month, year)
         if not success:
             return False, f"Assistants failed: {message}"
 

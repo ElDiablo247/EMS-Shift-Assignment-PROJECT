@@ -3,7 +3,6 @@ from repository.dao import DatabaseAccess
 import pandas as pd
 import calendar
 import datetime
-import time
 from logic.temporary_data import Cache
 
 
@@ -12,7 +11,7 @@ class ScheduleManager:
         self.dao = DatabaseAccess()
 
 
-    def generate_empty_template(self, month, year):
+    def generate_template(self, month, year):
         """Builds the empty template in memory. Returns (cache, None) on success,
         or (None, error_msg) if a schedule already exists for this month.
         Does NOT commit to DB — the caller chains into the next stage."""
@@ -43,11 +42,11 @@ class ScheduleManager:
 
     def generate_schedule(self, month, year):
         """One-shot: template → RS → RH → single DB commit."""
-        cache, err = self.generate_empty_template(month, year)
-        if err:
-            return False, err
-        cache = self.assign_paramedics_to_weekdays_shifts(cache)
-        return self.assign_rh_to_weekdays_shifts(cache)
+        cache, error_message = self.generate_template(month, year)
+        if error_message:
+            return False, error_message
+        cache = self.assign_paramedics(cache)
+        return self.assign_rest_of_employees(cache)
 
 
     def generate_cache(self, month, year):
@@ -65,7 +64,7 @@ class ScheduleManager:
         return cache
 
 
-    def assign_paramedics_to_weekdays_shifts(self, cache):
+    def assign_paramedics(self, cache):
         """Assigns paramedics (RS) to the given Cache in memory.
         Carries over the previous-month shift pattern first, then fills RS slots.
         Does NOT commit to DB — returns cache for the next stage."""
@@ -80,12 +79,12 @@ class ScheduleManager:
                     continue
                 random.shuffle(shift_ids)
                 for local_shift_id in shift_ids:
-                    self.fill_dates_of_week_with_paramedics(cache, local_shift_id, dates_dict, employee_ids)
+                    self.assign_week_with_paramedics(cache, local_shift_id, dates_dict, employee_ids)
 
         return cache
 
 
-    def fill_dates_of_week_with_paramedics(self, cache, shift_id, dates_dict, employee_ids):
+    def assign_week_with_paramedics(self, cache, shift_id, dates_dict, employee_ids):
         """Helper function to fill a week's worth of shifts with paramedics of a specific contract type."""
         local_employee = 'empty'
 
@@ -108,7 +107,7 @@ class ScheduleManager:
                 local_employee = 'empty'
 
 
-    def assign_rh_to_weekdays_shifts(self, cache):
+    def assign_rest_of_employees(self, cache):
         """Assigns assistants (RH) to the given Cache in memory,
         then commits the FULL schedule to the database in one shot."""
         shift_ids = cache.get_shift_ids()
@@ -120,7 +119,7 @@ class ScheduleManager:
                     continue
                 random.shuffle(shift_ids)
                 for local_shift_id in shift_ids:
-                    self.fill_dates_of_week_with_rh(cache, local_shift_id, dates_dict, employee_ids)
+                    self.assign_week_with_rest_employees(cache, local_shift_id, dates_dict, employee_ids)
 
         flat = cache.return_flattened_empty_template()
         if self.dao.bulk_insert_assignments(flat):
@@ -128,7 +127,7 @@ class ScheduleManager:
         return False, "Database error: Failed to save the schedule."
 
 
-    def fill_dates_of_week_with_rh(self, cache, shift_id, dates_dict, employee_ids):
+    def assign_week_with_rest_employees(self, cache, shift_id, dates_dict, employee_ids):
         """Fills a week's worth of RH slots for one shift. Keeps the same employee across
         all dates of the week until they hit their target, then picks the next eligible one.
         Each candidate must pass: under target, not already on that date, and 11h rest."""
@@ -250,7 +249,6 @@ class ScheduleManager:
         """Translates the edited UI grid back into database updates (un-pivot).
         Only sends rows that actually changed — diffs, not the full schedule."""
 
-        t0 = time.perf_counter()
         employees_df = self.dao.get_all_employees()
         emp_name_to_id = dict(zip(employees_df['name'], employees_df['id']))
         emp_name_to_id['-'] = None
@@ -322,7 +320,7 @@ class ScheduleManager:
         violations.extend(self.check_11_hour_violation(cache))
         violations.extend(self.check_double_shifts_violation(cache))
         violations.extend(self.check_vacation_violation(cache))
-        violations.extend(self.check_shifts_have_paramedic_violation(cache))
+        violations.extend(self.check_shifts_lack_paramedic_violation(cache))
         return violations
 
 
@@ -352,7 +350,7 @@ class ScheduleManager:
         return violations
 
 
-    def check_shifts_have_paramedic_violation(self, cache):
+    def check_shifts_lack_paramedic_violation(self, cache):
         """Violations where a shift has no qualified paramedic (RS) in its RS slot."""
         violations = []
 

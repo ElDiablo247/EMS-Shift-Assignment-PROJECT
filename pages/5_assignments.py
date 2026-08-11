@@ -23,7 +23,7 @@ class AssignmentPage:
         with col_2:
             year = st.number_input("Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1)
         if st.button("Generate"):
-            success, message, _ = self.schedule_manager.generate_empty_template(month, year)
+            success, message, _ = self.schedule_manager.generate_template(month, year)
             if success:
                 st.success(message)
                 time.sleep(1.5)
@@ -45,7 +45,7 @@ class AssignmentPage:
             a_year = st.number_input("Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="aa_year")
         
         if st.button("Assign"):
-            success, message = self.schedule_manager.assign_paramedics_to_weekdays_shifts(a_month, a_year)
+            success, message = self.schedule_manager.assign_paramedics(a_month, a_year)
             if success:
                 st.success(message)
                 time.sleep(1.5)
@@ -67,7 +67,7 @@ class AssignmentPage:
             rh_year = st.number_input("Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="rh_year")
 
         if st.button("Fill Assistant Slots"):
-            success, message = self.schedule_manager.assign_rh_to_weekdays_shifts(rh_month, rh_year)
+            success, message = self.schedule_manager.assign_rest_of_employees(rh_month, rh_year)
             if success:
                 st.success(message)
                 time.sleep(1.5)
