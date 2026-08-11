@@ -212,15 +212,33 @@ class AssignmentPage:
             st.success("No violations found — schedule is clean!")
 
 
+    def generate_schedule_section(self):
+        """One-click: generates the full schedule (template + RS + RH) in one shot."""
+        st.info("Generate the complete schedule — all stages in memory, single DB commit.")
+        now = datetime.datetime.now()
+        col_1, col_2 = st.columns(2)
+        with col_1:
+            month = st.selectbox("Month", range(1, 13), index=now.month - 1, key="gs_month")
+        with col_2:
+            year = st.number_input("Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="gs_year")
+        if st.button("Generate Full Schedule", use_container_width=True):
+            with st.spinner("Generating schedule in memory..."):
+                success, message = self.schedule_manager.generate_schedule(month, year)
+            if success:
+                st.success(message)
+                time.sleep(1.5)
+                st.rerun()
+            else:
+                st.error(message)
+                time.sleep(2)
+                st.rerun()
+
+
     def render_page(self):
         """Renders the assignments management page."""
         with st.sidebar:
-            with st.expander("Generate Empty Template", expanded=True):
-                self.generate_empty_template_section()
-            with st.expander("Auto Assign Paramedics", expanded=True):
-                self.auto_assign_section()
-            with st.expander("Fill Assistant Slots", expanded=True):
-                self.auto_assign_rh_section()
+            with st.expander("Generate Full Schedule", expanded=True):
+                self.generate_schedule_section()
         
         with st.container(border=True):
             self.display_schedule_section()

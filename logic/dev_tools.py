@@ -2,6 +2,7 @@ from repository.dao import DatabaseAccess
 from datetime import datetime
 import json
 from logic.schedule_manager import ScheduleManager
+import time
 
 
 class Developer:
@@ -125,3 +126,13 @@ class Developer:
         if success:
             return True, f"Successfully deleted {count} assignment(s) for {month}/{year}."
         return False, "Database error: Failed to delete assignments."
+
+
+    @staticmethod
+    def time_function(func, *args, **kwargs):
+        """Runs any callable, prints and returns its duration alongside the result."""
+        t0 = time.perf_counter()
+        result = func(*args, **kwargs)
+        elapsed = time.perf_counter() - t0
+        print(f"[TIMER] {func.__name__}: {elapsed:.4f}s")
+        return result, elapsed

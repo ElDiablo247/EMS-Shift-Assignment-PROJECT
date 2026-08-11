@@ -3,7 +3,7 @@ import calendar
 import datetime
 
 
-class DataHolder:
+class Cache:
     def __init__(self):
         self.month = None
         self.year = None
@@ -20,8 +20,8 @@ class DataHolder:
         self.sick_leaves = {}
 
 
-    def set_up_data_holder(self, month, year, holidays_df, shifts_df, employees_df, assignments_df, vacations_df, sick_leaves_df, ft_hours):
-        """Initializes the DataHolder with the necessary data to begin with the Scheduling process."""
+    def set_up_cache(self, month, year, holidays_df, shifts_df, employees_df, assignments_df, vacations_df, sick_leaves_df, ft_hours):
+        """Initializes the Cache with the necessary data to begin with the Scheduling process."""
         self.month = month
         self.year = year
         self._store_dates(month, year)

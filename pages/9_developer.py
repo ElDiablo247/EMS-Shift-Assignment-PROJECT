@@ -2,7 +2,6 @@ import streamlit as st
 from logic.dev_tools import Developer
 from logic.auth_utils import ensure_authenticated
 from logic.schedule_manager import ScheduleManager
-import time
 import datetime
 
 
@@ -26,26 +25,6 @@ class DeveloperPage:
             st.success(msg)
 
 
-    def add_constraint_section(self):
-        """Developer widget to directly inject constraints without wiping the database."""
-        st.header("Inject Constraint")
-        st.info("Add a constraint directly. Type lists like [\"K1\"] or numbers like 40.0.")
-        with st.form("dev_add_constraint_form", clear_on_submit=True):
-            category = st.text_input("Category (e.g., Shifts per day)")
-            key = st.text_input("Constraint Key (e.g., Weekdays)")
-            value_str = st.text_input("Constraint Value (e.g., [\"K1\", \"K2\"] or 40.0 or BY)")
-            description = st.text_input("Description")
-            
-            if st.form_submit_button("Inject to Database"):
-                success, message = self.developer.dev_add_constraint(category, key, value_str, description)
-                if success:
-                    st.success(message)
-                    time.sleep(1.5)
-                    st.rerun()
-                else:
-                    st.error(message)
-
-    
     def delete_constraint_section(self):
         """Developer widget to delete constraints by ID."""
         st.header("Delete Constraint")
@@ -112,12 +91,10 @@ class DeveloperPage:
         col1, col2 = st.columns([2, 2], gap="xlarge")
         with col1:
             with st.container(border=True):
-                self.add_constraint_section()
+                self.bulk_upload_section()
             with st.container(border=True):
                 self.delete_DB_assignments()
         with col2:
-            with st.container(border=True):
-                self.bulk_upload_section()
             with st.container(border=True):
                 self.delete_constraint_section()
             with st.container(border=True):
