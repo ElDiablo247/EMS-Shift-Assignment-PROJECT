@@ -337,6 +337,14 @@ class Cache:
         return gap_hours >= 11.0
 
 
+    def is_night_shift(self, shift_id):
+        """Returns True if the shift is an overnight shift (end time before start time)."""
+        shift = self.shifts.get(shift_id)
+        if not shift:
+            return False
+        return shift['shift_end'] < shift['shift_start']
+
+
     def get_employees_sorted_by_remaining(self, contract_type):
         """Returns employee IDs of the given contract_type, sorted by remaining hours
         descending (most remaining first). Excludes employees already at or over target."""

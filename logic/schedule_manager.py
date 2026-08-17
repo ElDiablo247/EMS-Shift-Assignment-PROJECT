@@ -312,6 +312,49 @@ class ScheduleManager:
         return True, "No changes detected."
 
 
+    def swap_shift_employees(self, date_range, shift_a_name, shift_b_name, role):
+        """Swaps the employees of two shift-role slots for each day inside the date range.
+        Handles all validation and shift-name resolution; commits only the swapped days."""
+        if not (isinstance(date_range, tuple) and len(date_range) == 2):
+            return False, "Please select a full date range (start and end)."
+
+        start_date, end_date = date_range
+        if (start_date.year, start_date.month) != (end_date.year, end_date.month):
+            return False, "The date range must stay within a single month."
+        if shift_a_name == shift_b_name:
+            return False, "Please choose two different shifts."
+
+        shifts_df = self.dao.get_all_shifts()
+        shift_name_to_id = dict(zip(shifts_df['shift_name'], shifts_df['id']))
+        shift_a_id = shift_name_to_id.get(shift_a_name)
+        shift_b_id = shift_name_to_id.get(shift_b_name)
+        if shift_a_id is None or shift_b_id is None:
+            return False, "One of the selected shifts could not be found."
+
+        month, year = start_date.month, start_date.year
+        cache = self.generate_cache(month, year)
+        updates = []
+        for date in cache.dates:
+            if not (start_date <= date <= end_date):
+                continue
+            day = cache.shifts_schedule.get(date)
+            if not day or shift_a_id not in day or shift_b_id not in day:
+                continue  # one of the shifts doesn't run on this date
+            emp_a = day[shift_a_id].get(role)
+            emp_b = day[shift_b_id].get(role)
+            if emp_a == emp_b:
+                continue  # identity swap, skip silently
+            day[shift_a_id][role], day[shift_b_id][role] = emp_b, emp_a
+            updates.append({'date': date, 'shift_id': shift_a_id, 'role': role, 'employee_id': emp_b})
+            updates.append({'date': date, 'shift_id': shift_b_id, 'role': role, 'employee_id': emp_a})
+
+        if not updates:
+            return False, "No days found in the range where both shifts run."
+        if self.dao.update_monthly_assignments(updates):
+            return True, f"Swap executed successfully for {len(updates) // 2} day(s)."
+        return False, "Database error: Failed to save the swap."
+
+
     def find_schedule_violations(self, month, year):
         """Runs all constraint checks on the schedule and returns a list of violation dicts."""
         cache = self.generate_cache(month, year)
@@ -321,6 +364,7 @@ class ScheduleManager:
         violations.extend(self.check_double_shifts_violation(cache))
         violations.extend(self.check_vacation_violation(cache))
         violations.extend(self.check_shifts_lack_paramedic_violation(cache))
+        violations.extend(self.check_night_shift_violation(cache))
         return violations
 
 
@@ -424,5 +468,32 @@ class ScheduleManager:
                             'Type': 'On leave',
                             'Description': f'{name} is on leave but assigned to {shift_name}-{role}'
                         })
+
+        return violations
+
+
+    def check_night_shift_violation(self, cache):
+        """Violations where an employee worked more than 5 days of night shifts in the month."""
+        violations = []
+
+        night_days = {}  # employee_id -> set of dates with a night shift
+        for date_val, shifts in cache.shifts_schedule.items():
+            for shift_id, roles in shifts.items():
+                if not cache.is_night_shift(shift_id):
+                    continue
+                for role, emp_id in roles.items():
+                    if emp_id is not None:
+                        night_days.setdefault(emp_id, set()).add(date_val)
+
+        for emp_id, dates in night_days.items():
+            if len(dates) > 5:
+                name = cache.employees.get(emp_id, {}).get('name', f'ID {emp_id}')
+                violations.append({
+                    'Date': '-',
+                    'Shift': 'Night shifts',
+                    'Employee': name,
+                    'Type': 'Night shift limit',
+                    'Description': f'{name} worked {len(dates)} night shift days this month (limit is 5)'
+                })
 
         return violations

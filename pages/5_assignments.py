@@ -2,6 +2,7 @@ import streamlit as st
 from logic.auth_utils import ensure_authenticated
 from logic.schedule_manager import ScheduleManager
 from logic.staff_manager import StaffManager
+from logic.shift_manager import ShiftManager
 import datetime
 import time
 
@@ -11,6 +12,7 @@ class AssignmentPage:
         ensure_authenticated()
         self.staff_manager = StaffManager()
         self.schedule_manager = ScheduleManager()
+        self.shift_manager = ShiftManager()
 
 
     def generate_empty_template_section(self):
@@ -234,11 +236,51 @@ class AssignmentPage:
                 st.rerun()
 
 
+    def swap_shifts_section(self):
+        """Bulk-swap employees between two shift-role slots across a date range."""
+        st.info("Swap employees between two shifts for a specific role across a date range.")
+        now = datetime.datetime.now()
+
+        default_range = (
+            datetime.date(now.year, now.month, 1),
+            datetime.date(now.year, now.month, now.day),
+        )
+        date_range = st.date_input("Date range", value=default_range, key="swap_range")
+
+        active_shift_names = self.shift_manager.return_shift_names()
+        if not active_shift_names:
+            st.warning("No active shifts found.")
+            return
+
+        col_a, col_b = st.columns(2)
+        with col_a:
+            shift_a_name = st.selectbox("Shift A", active_shift_names, key="swap_shift_a")
+        with col_b:
+            shift_b_name = st.selectbox("Shift B", active_shift_names, key="swap_shift_b")
+
+        role = st.selectbox("Role", ["RS", "RH"], key="swap_role")
+
+        if st.button("Execute Swap", use_container_width=True, key="swap_button"):
+            success, message = self.schedule_manager.swap_shift_employees(
+                date_range, shift_a_name, shift_b_name, role
+            )
+            if success:
+                st.success(message)
+                time.sleep(1.5)
+                st.rerun()
+            else:
+                st.error(message)
+                time.sleep(2)
+                st.rerun()
+
+
     def render_page(self):
         """Renders the assignments management page."""
         with st.sidebar:
             with st.expander("Generate Full Schedule", expanded=True):
                 self.generate_schedule_section()
+            with st.expander("Swap Shift Employees", expanded=False):
+                self.swap_shifts_section()
         
         with st.container(border=True):
             self.display_schedule_section()
