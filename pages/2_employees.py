@@ -70,30 +70,6 @@ class EmployeePage:
                     st.error(message)
 
 
-    def add_sick_leave_section(self):
-        """Section for adding sick leave entries."""
-        employee_id = st.number_input("Employee ID", min_value=6001, step=1, key="sick_emp_id")
-        date_range = st.date_input(
-            "Sick Leave Dates",
-            value=(datetime.date.today(), datetime.date.today() + datetime.timedelta(days=1)),
-            min_value=datetime.date.today(),
-            format="DD/MM/YYYY",
-            key="sick_dates"
-        )
-        if st.button("Add Sick Leave"):
-            if not isinstance(date_range, tuple) or len(date_range) != 2:
-                st.error("Please select a start and end date.")
-            else:
-                start_date, end_date = date_range[0], date_range[1]
-                success, message = self.staff_manager.add_sick_leave(employee_id, start_date, end_date)
-                if success:
-                    st.success(message)
-                    time.sleep(1.5)
-                    st.rerun()
-                else:
-                    st.error(message)
-
-
     def display_employee_table(self):
         """Displays the employee data in an editable table format."""
         st.header("Staff Management")
@@ -129,44 +105,24 @@ class EmployeePage:
                 st.error(message)
 
 
-    def display_vacation_sick_leave_section(self):
-        """Display vacation and sick leave tables in tabs."""
-        st.header("Vacations and Sick leaves Overview")
-        tab1, tab2 = st.tabs(["Vacations", "Sick Leaves"])
-        
-        with tab1:
-            df = self.staff_manager.get_all_vacations_pivot()
-            if df.empty:
-                st.info("No vacations registered.")
-            else:
-                st.dataframe(
-                    df,
-                    column_config={
-                        "id": st.column_config.NumberColumn("ID", width="small"),
-                        "employee_name": st.column_config.TextColumn("Employee Name"),
-                        "start_date": st.column_config.DateColumn("Start Date", format="DD/MM/YYYY"),
-                        "end_date": st.column_config.DateColumn("End Date", format="DD/MM/YYYY"),
-                    },
-                    use_container_width=True,
-                    hide_index=True
-                )
-
-        with tab2:
-            df = self.staff_manager.get_all_sick_leaves_pivot()
-            if df.empty:
-                st.info("No sick leaves registered.")
-            else:
-                st.dataframe(
-                    df,
-                    column_config={
-                        "id": st.column_config.NumberColumn("ID", width="small"),
-                        "employee_name": st.column_config.TextColumn("Employee Name"),
-                        "start_date": st.column_config.DateColumn("Start Date", format="DD/MM/YYYY"),
-                        "end_date": st.column_config.DateColumn("End Date", format="DD/MM/YYYY"),
-                    },
-                    use_container_width=True,
-                    hide_index=True
-                )
+    def display_vacation_section(self):
+        """Display vacation table."""
+        st.header("Vacations Overview")
+        df = self.staff_manager.get_all_vacations_pivot()
+        if df.empty:
+            st.info("No vacations registered.")
+        else:
+            st.dataframe(
+                df,
+                column_config={
+                    "id": st.column_config.NumberColumn("ID", width="small"),
+                    "employee_name": st.column_config.TextColumn("Employee Name"),
+                    "start_date": st.column_config.DateColumn("Start Date", format="DD/MM/YYYY"),
+                    "end_date": st.column_config.DateColumn("End Date", format="DD/MM/YYYY"),
+                },
+                use_container_width=True,
+                hide_index=True
+            )
 
 
     def render_page(self):
@@ -179,17 +135,15 @@ class EmployeePage:
                 self.add_vacation_section()
             with st.expander("Delete Vacation", expanded=False):
                 self.delete_vacation_section()
-            with st.expander("Register Sick Leave", expanded=False):
-                self.add_sick_leave_section()
 
-        # Main Area. On the left, the Employees table, and on the right using tabs, the Vacation and Sick leave table.
+        # Main Area. On the left, the Employees table, and on the right, the Vacation table.
         col1, col2 = st.columns([6, 4], gap="medium")
         with col1:
             with st.container(border=True):
                 self.display_employee_table()
         with col2:
             with st.container(border=True):
-                self.display_vacation_sick_leave_section()
+                self.display_vacation_section()
 
 
 if __name__ == "__main__":

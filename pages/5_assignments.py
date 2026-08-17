@@ -200,13 +200,12 @@ class AssignmentPage:
             st.dataframe(
                 result,
                 column_config={
-                    "Date": st.column_config.TextColumn("Date"),
-                    "Shift": st.column_config.TextColumn("Shift"),
-                    "Employee": st.column_config.TextColumn("Employee"),
-                    "Type": st.column_config.TextColumn("Type"),
-                    "Description": st.column_config.TextColumn("Description"),
+                    "Date": st.column_config.TextColumn("Date", width="small"),
+                    "Shift": st.column_config.TextColumn("Shift", width="medium"),
+                    "Employee": st.column_config.TextColumn("Employee", width="medium"),
+                    "Type": st.column_config.TextColumn("Type", width="medium"),
+                    "Description": st.column_config.TextColumn("Description", width="large"),
                 },
-                use_container_width=True,
                 width='content',
                 hide_index=True,
             )

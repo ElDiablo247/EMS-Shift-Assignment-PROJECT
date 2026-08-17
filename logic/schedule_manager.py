@@ -57,10 +57,9 @@ class ScheduleManager:
         employees_df = self.dao.get_all_employees()
         assignments_df = self.dao.get_assignments_for_month(month, year)
         vacations_df = self.dao.get_all_vacations()
-        sick_leaves_df = self.dao.get_all_sick_leaves()
         ft_hours = self.dao.get_single_constraint("Contract hours", "Full-time 100%")
         ft_hours = float(ft_hours) if ft_hours else 42.5   # convert string to float
-        cache.set_up_cache(month, year, holidays_df, shifts_df, employees_df, assignments_df, vacations_df, sick_leaves_df, ft_hours)
+        cache.set_up_cache(month, year, holidays_df, shifts_df, employees_df, assignments_df, vacations_df, ft_hours)
         return cache
 
 
@@ -452,7 +451,7 @@ class ScheduleManager:
 
 
     def check_vacation_violation(self, cache):
-        """Violations where an employee is assigned on a day they are on vacation or sick leave."""
+        """Violations where an employee is assigned on a day they are on vacation."""
         violations = []
 
         for date_val, shifts in cache.shifts_schedule.items():
@@ -466,7 +465,7 @@ class ScheduleManager:
                             'Shift': f'{shift_name}-{role}',
                             'Employee': name,
                             'Type': 'On leave',
-                            'Description': f'{name} is on leave but assigned to {shift_name}-{role}'
+                            'Description': f'{name} is on vacation but assigned to {shift_name}-{role}'
                         })
 
         return violations
@@ -493,7 +492,7 @@ class ScheduleManager:
                     'Shift': 'Night shifts',
                     'Employee': name,
                     'Type': 'Night shift limit',
-                    'Description': f'{name} worked {len(dates)} night shift days this month (limit is 5)'
+                    'Description': f'{name} worked {len(dates)} night shifts (limit=5)'
                 })
 
         return violations

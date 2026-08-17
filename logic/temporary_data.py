@@ -17,10 +17,9 @@ class Cache:
         self.assigned_employees_for_date = {}
         self.prev_month_shift_pattern = {}
         self.vacations = {}
-        self.sick_leaves = {}
 
 
-    def set_up_cache(self, month, year, holidays_df, shifts_df, employees_df, assignments_df, vacations_df, sick_leaves_df, ft_hours):
+    def set_up_cache(self, month, year, holidays_df, shifts_df, employees_df, assignments_df, vacations_df, ft_hours):
         """Initializes the Cache with the necessary data to begin with the Scheduling process."""
         self.month = month
         self.year = year
@@ -32,7 +31,6 @@ class Cache:
         self._map_weekdays_to_weeks()
         self._map_assigned_employees_for_date()
         self._store_vacations(vacations_df, month, year)
-        self._store_sick_leaves(sick_leaves_df, month, year)
         self._map_employees_to_hours(ft_hours, assignments_df, shifts_df)
 
 
@@ -182,19 +180,6 @@ class Cache:
                 self.vacations.setdefault(emp_id, set()).add(date_val)
 
 
-    def _store_sick_leaves(self, sick_leaves_df, month, year):
-        """
-        Builds self.sick_leaves: {employee_id: set of sick leave dates in this month}. Stores ALL dates — weekends and holidays included.
-        """
-        if sick_leaves_df is None or sick_leaves_df.empty:
-            return
-        for _, row in sick_leaves_df.iterrows():
-            emp_id = int(row['employee_id'])
-            date_val = pd.to_datetime(row['sick_leave_date']).date()
-            if date_val.year == year and date_val.month == month:
-                self.sick_leaves.setdefault(emp_id, set()).add(date_val)
-
-
     def _set_prev_month_shift_pattern(self, assignments_df):
         """
         Stores the shift pattern from the last weekday of the previous month, but ONLY if that day was a regular weekday 
@@ -286,8 +271,8 @@ class Cache:
 
 
     def is_on_leave(self, emp_id, date):
-        """Returns True if the employee is on vacation or sick leave on the given date."""
-        return (date in self.vacations.get(emp_id, set()) or date in self.sick_leaves.get(emp_id, set()))
+        """Returns True if the employee is on vacation on the given date."""
+        return date in self.vacations.get(emp_id, set())
 
 
     # ------------------------------------------------------------------

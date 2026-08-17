@@ -67,28 +67,6 @@ class StaffManager:
             return False, "Error deleting vacation. Please try again."
 
 
-    def add_sick_leave(self, employee_id, start_date, end_date):
-        """Expands the date range into individual dates and inserts one row per date."""
-        if not employee_id:
-            return False, "Validation failed: Employee ID is missing."
-        if not start_date:
-            return False, "Validation failed: Start date is missing."
-        if not end_date:
-            return False, "Validation failed: End date is missing."
-        
-        current = start_date
-        count = 0
-        while current <= end_date:
-            if self.dao.insert_sick_leave(employee_id, current):
-                count += 1
-            current += timedelta(days=1)
-        
-        if count > 0:
-            return True, f"{count} sick leave day(s) added successfully."
-        else:
-            return False, "Error adding sick leave. Please try again."
-
-
     def get_all_vacations_pivot(self):
         df = self.dao.get_all_vacations()
         if df.empty:
@@ -97,16 +75,6 @@ class StaffManager:
         name_map = dict(zip(employees_df['id'], employees_df['name']))
         df['employee_name'] = df['employee_id'].map(name_map)
         return df[['id', 'employee_name', 'vacation_date']]
-
-
-    def get_all_sick_leaves_pivot(self):
-        df = self.dao.get_all_sick_leaves()
-        if df.empty:
-            return df
-        employees_df = self.dao.get_all_employees()
-        name_map = dict(zip(employees_df['id'], employees_df['name']))
-        df['employee_name'] = df['employee_id'].map(name_map)
-        return df[['id', 'employee_name', 'sick_leave_date']]
 
 
     def update_employees(self, employees_df):

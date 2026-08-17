@@ -1,5 +1,5 @@
 from repository.db_engine import db_obj
-from repository.models import Employee, Shift, Admin, Constraint, Holiday, Assignment, SickLeave, Vacation
+from repository.models import Employee, Shift, Admin, Constraint, Holiday, Assignment, Vacation
 import pandas as pd
 import calendar
 import datetime
@@ -466,21 +466,6 @@ class DatabaseAccess:
             return False
 
 
-    def insert_sick_leave(self, employee_id, sick_leave_date):
-        """Inserts a single sick leave date into the database."""
-        try:
-            with self.db.get_session() as session:
-                new_sick_leave = SickLeave(
-                    employee_id=employee_id,
-                    sick_leave_date=sick_leave_date
-                )
-                session.add(new_sick_leave)
-            return True
-        except Exception as e:
-            print(f"Error inserting sick leave: {e}")
-            return False
-
-
     def get_all_vacations(self):
         try:
             with self.db.get_session() as session:
@@ -488,16 +473,6 @@ class DatabaseAccess:
                 return pd.read_sql(query.statement, session.bind)
         except Exception as e:
             print(f"Error retrieving vacations: {e}")
-            return pd.DataFrame()
-
-
-    def get_all_sick_leaves(self):
-        try:
-            with self.db.get_session() as session:
-                query = session.query(SickLeave).order_by(SickLeave.sick_leave_date)
-                return pd.read_sql(query.statement, session.bind)
-        except Exception as e:
-            print(f"Error retrieving sick leaves: {e}")
             return pd.DataFrame()
 
 

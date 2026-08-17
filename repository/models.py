@@ -77,11 +77,3 @@ class Vacation(Base):
     id = Column(Integer, primary_key=True)
     employee_id = Column(Integer, ForeignKey('employees.id'), nullable=False)
     vacation_date = Column(Date, nullable=False)
-
-
-class SickLeave(Base):
-    __tablename__ = 'sick_leaves'
-    
-    id = Column(Integer, primary_key=True)
-    employee_id = Column(Integer, ForeignKey('employees.id'), nullable=False)
-    sick_leave_date = Column(Date, nullable=False)
