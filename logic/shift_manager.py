@@ -7,12 +7,38 @@ class ShiftManager:
         self.dao = DatabaseAccess()
 
 
-    def add_shift(self, shift_name, shift_start, shift_end, shift_duration, runs_on_weekend_or_holiday):
-        """
-        Validates input, generates an ID, and calls DAO to save shift.
-        """
+    @staticmethod
+    def calculate_shift_duration(shift_start, shift_end):
+        """Derives the stored shift duration by subtracting the legally mandated break:
+        - total time between 6 and 9 hours  → 30-minute break
+        - total time over 9 and up to 10h45 → 45-minute break
+        Returns the net duration in hours, or None if the shift length is outside that range."""
+        if shift_start is None or shift_end is None:
+            return None
+
+        start_minutes = shift_start.hour * 60 + shift_start.minute
+        end_minutes = shift_end.hour * 60 + shift_end.minute
+        if end_minutes <= start_minutes:
+            end_minutes += 24 * 60  # overnight shift crossing midnight
+        total_minutes = end_minutes - start_minutes
+
+        if 6 * 60 <= total_minutes <= 9 * 60:
+            net_minutes = total_minutes - 30
+        elif 9 * 60 < total_minutes <= 10 * 60 + 45:
+            net_minutes = total_minutes - 45
+        else:
+            return None
+        return round(net_minutes / 60, 2)
+
+
+    def add_shift(self, shift_name, shift_start, shift_end, runs_on_weekend_or_holiday):
+        """Validates input, derives the shift duration, generates an ID, and calls DAO to save shift."""
         if not shift_name or not shift_start or not shift_end:
-            return False, "Validation failed: All shift fields must be populated."
+            return False, "Validation failed: Shift fields are missing. Please ensure all fields are filled."
+
+        shift_duration = self.calculate_shift_duration(shift_start, shift_end)
+        if shift_duration is None:
+            return False, "Validation failed: Shift total time must be between 6 and 10 hours 45 minutes."
 
         # ID Generation
         last_id = self.dao.get_last_shift_id()

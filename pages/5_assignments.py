@@ -15,74 +15,9 @@ class AssignmentPage:
         self.shift_manager = ShiftManager()
 
 
-    def generate_empty_template_section(self):
-        """Section for generating an empty assignment template for a specific month and year."""
-        st.info("Select the month and year to generate the initial empty assignment template.")
-        now = datetime.datetime.now()
-        col_1, col_2 = st.columns(2)
-        with col_1:
-            month = st.selectbox("Month", range(1, 13), index=now.month - 1)
-        with col_2:
-            year = st.number_input("Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1)
-        if st.button("Generate"):
-            success, message, _ = self.schedule_manager.generate_template(month, year)
-            if success:
-                st.success(message)
-                time.sleep(1.5)
-                st.rerun()
-            else:
-                st.error(message)
-                time.sleep(1.5)
-                st.rerun()
-
-
-    def auto_assign_section(self):
-        """Section for auto-assigning paramedics to shifts for a specific month and year."""
-        st.info("Trigger the auto-assignment algorithm for shifts that require paramedics in a specific month.")
-        now = datetime.datetime.now()
-        col_1, col_2 = st.columns(2)
-        with col_1:
-            a_month = st.number_input("Month", min_value=1, max_value=12, value=now.month, step=1, key="aa_month")
-        with col_2:
-            a_year = st.number_input("Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="aa_year")
-        
-        if st.button("Assign"):
-            success, message = self.schedule_manager.assign_paramedics(a_month, a_year)
-            if success:
-                st.success(message)
-                time.sleep(1.5)
-                st.rerun()
-            else:
-                st.error(message)
-                time.sleep(1.5)
-                st.rerun()
-
-
-    def auto_assign_rh_section(self):
-        """Section for auto-assigning assistants (RH) to shifts for a specific month and year."""
-        st.info("Trigger the auto-assignment algorithm for shifts that require assistants (RH) in a specific month.")
-        now = datetime.datetime.now()
-        col_1, col_2 = st.columns(2)
-        with col_1:
-            rh_month = st.number_input("Month", min_value=1, max_value=12, value=now.month, step=1, key="rh_month")
-        with col_2:
-            rh_year = st.number_input("Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="rh_year")
-
-        if st.button("Fill Assistant Slots"):
-            success, message = self.schedule_manager.assign_rest_of_employees(rh_month, rh_year)
-            if success:
-                st.success(message)
-                time.sleep(1.5)
-                st.rerun()
-            else:
-                st.error(message)
-                time.sleep(1.5)
-                st.rerun()
-
-
     def display_schedule_section(self):
         """Section for displaying the generated shift assignments."""
-        st.header("Current Assignments")
+        st.header("Schedule Overview")
         
         now = datetime.datetime.now()
         col1, col2 = st.columns(2)
@@ -174,8 +109,8 @@ class AssignmentPage:
 
     def violations_section(self):
         """Section for scanning the schedule for constraint violations."""
-        st.header("Violations")
-        st.info("Scan for constraint violations (11-hour rest, double shifts, vacations, missing paramedics).")
+        st.header("Violations Overview")
+        st.info("Scan for constraint violations (11-hour rest, double shifts, vacations, missing paramedics and night shift fairness).")
 
         now = datetime.datetime.now()
         col1, col2, col3 = st.columns([1, 1, 2])

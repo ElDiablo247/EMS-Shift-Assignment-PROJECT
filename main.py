@@ -60,7 +60,7 @@ class Homepage:
             pages.append(st.Page("pages/2_employees.py", title="EMS Staff Configuration"))
             pages.append(st.Page("pages/3_shifts.py", title="Shifts Configuration"))
             pages.append(st.Page("pages/4_constraints.py", title="Constraints Configuration"))
-            pages.append(st.Page("pages/5_assignments.py", title="Shift Scheduling"))
+            pages.append(st.Page("pages/5_assignments.py", title="Schedule Configuration"))
             pages.append(st.Page("pages/9_developer.py", title="Dev Tools"))
 
             pg = st.navigation(pages, position="top")
