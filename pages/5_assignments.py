@@ -107,10 +107,10 @@ class AssignmentPage:
             )
 
 
-    def violations_section(self):
-        """Section for scanning the schedule for constraint violations."""
-        st.header("Violations Overview")
-        st.info("Scan for constraint violations (11-hour rest, double shifts, vacations, missing paramedics and night shift fairness).")
+    def errors_section(self):
+        """Section for scanning the schedule for constraint errors."""
+        st.header("Errors Overview")
+        st.info("Scan for constraint errors (11-hour rest, double shifts, vacations, missing paramedics and night shift fairness).")
 
         now = datetime.datetime.now()
         col1, col2, col3 = st.columns([1, 1, 2])
@@ -119,19 +119,19 @@ class AssignmentPage:
         with col2:
             v_year = st.number_input("Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="v_year")
         with col3:
-            if st.button("Find Constraint Violations", use_container_width=True, key="v_button"):
+            if st.button("Find Constraint Errors", use_container_width=True, key="v_button"):
                 with st.spinner("Scanning schedule..."):
-                    violations = self.schedule_manager.find_schedule_violations(v_month, v_year)
-                if violations:
-                    st.session_state["violations_result"] = violations
+                    errors = self.schedule_manager.find_schedule_errors(v_month, v_year)
+                if errors:
+                    st.session_state["errors_result"] = errors
                 else:
-                    st.session_state["violations_result"] = []
+                    st.session_state["errors_result"] = []
 
-        result = st.session_state.get("violations_result", None)
+        result = st.session_state.get("errors_result", None)
         if result is None:
             return
         if result:
-            st.error(f"Found {len(result)} violation(s):")
+            st.error(f"Found {len(result)} error(s):")
             st.dataframe(
                 result,
                 column_config={
@@ -145,7 +145,7 @@ class AssignmentPage:
                 hide_index=True,
             )
         else:
-            st.success("No violations found — schedule is clean!")
+            st.success("No errors found — schedule is clean!")
 
 
     def generate_schedule_section(self):
@@ -222,7 +222,7 @@ class AssignmentPage:
         left, right = st.columns([7, 5])
         with left:
             with st.container(border=True):
-                self.violations_section()
+                self.errors_section()
         with right:
             with st.container(border=True):
                 self.employee_hours_section()

@@ -51,7 +51,7 @@ class ShiftManager:
             return True, "Shift added successfully."
         else:
             return False, "Error adding shift. Please try again."
-        
+
 
     def get_all_shifts(self):
         """Pass-through to DAO"""

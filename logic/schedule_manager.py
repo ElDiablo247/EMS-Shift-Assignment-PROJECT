@@ -354,22 +354,22 @@ class ScheduleManager:
         return False, "Database error: Failed to save the swap."
 
 
-    def find_schedule_violations(self, month, year):
-        """Runs all constraint checks on the schedule and returns a list of violation dicts."""
+    def find_schedule_errors(self, month, year):
+        """Runs all constraint checks on the schedule and returns a list of error dicts."""
         cache = self.generate_cache(month, year)
 
-        violations = []
-        violations.extend(self.check_11_hour_violation(cache))
-        violations.extend(self.check_double_shifts_violation(cache))
-        violations.extend(self.check_vacation_violation(cache))
-        violations.extend(self.check_shifts_lack_paramedic_violation(cache))
-        violations.extend(self.check_night_shift_violation(cache))
-        return violations
+        errors = []
+        errors.extend(self.check_11_hour_error(cache))
+        errors.extend(self.check_double_shifts_error(cache))
+        errors.extend(self.check_vacation_error(cache))
+        errors.extend(self.check_shifts_lack_paramedic_error(cache))
+        errors.extend(self.check_night_shift_error(cache))
+        return errors
 
 
-    def check_double_shifts_violation(self, cache):
-        """Violations where an employee is assigned to multiple shifts on the same day."""
-        violations = []
+    def check_double_shifts_error(self, cache):
+        """Errors where an employee is assigned to multiple shifts on the same day."""
+        errors = []
 
         for date_val, shifts in cache.shifts_schedule.items():
             emp_roles = {}
@@ -382,7 +382,7 @@ class ScheduleManager:
             for emp_id, assigned in emp_roles.items():
                 if len(assigned) > 1:
                     name = cache.employees.get(emp_id, {}).get('name', f'ID {emp_id}')
-                    violations.append({
+                    errors.append({
                         'Date': date_val.strftime('%d.%m.%Y'),
                         'Shift': ', '.join(assigned),
                         'Employee': name,
@@ -390,12 +390,12 @@ class ScheduleManager:
                         'Description': f'{name} assigned to {", ".join(assigned)} on same day'
                     })
 
-        return violations
+        return errors
 
 
-    def check_shifts_lack_paramedic_violation(self, cache):
-        """Violations where a shift has no qualified paramedic (RS) in its RS slot."""
-        violations = []
+    def check_shifts_lack_paramedic_error(self, cache):
+        """Errors where a shift has no qualified paramedic (RS) in its RS slot."""
+        errors = []
 
         for date_val, shifts in cache.shifts_schedule.items():
             for shift_id, roles in shifts.items():
@@ -403,7 +403,7 @@ class ScheduleManager:
                 shift_name = cache.shifts.get(shift_id, {}).get('shift_name', '?')
 
                 if rs_emp is None:
-                    violations.append({
+                    errors.append({
                         'Date': date_val.strftime('%d.%m.%Y'),
                         'Shift': shift_name,
                         'Employee': '-',
@@ -414,7 +414,7 @@ class ScheduleManager:
                     qual = cache.employees.get(rs_emp, {}).get('qualification', '')
                     if qual != 'RS':
                         name = cache.employees.get(rs_emp, {}).get('name', f'ID {rs_emp}')
-                        violations.append({
+                        errors.append({
                             'Date': date_val.strftime('%d.%m.%Y'),
                             'Shift': shift_name,
                             'Employee': name,
@@ -422,12 +422,12 @@ class ScheduleManager:
                             'Description': f'{shift_name} RS slot filled by {name} ({qual}), not a paramedic'
                         })
 
-        return violations
+        return errors
 
 
-    def check_11_hour_violation(self, cache):
-        """Violations where an employee has < 11h rest between consecutive-day shifts."""
-        violations = []
+    def check_11_hour_error(self, cache):
+        """Errors where an employee has < 11h rest between consecutive-day shifts."""
+        errors = []
 
         for date_val, shifts in cache.shifts_schedule.items():
             for shift_id, roles in shifts.items():
@@ -439,7 +439,7 @@ class ScheduleManager:
                         continue
                     if not cache.is_11h_rest_satisfied(emp_id, date_val, shift_id):
                         name = cache.employees.get(emp_id, {}).get('name', f'ID {emp_id}')
-                        violations.append({
+                        errors.append({
                             'Date': date_val.strftime('%d.%m.%Y'),
                             'Shift': f'{shift_name}-{role}',
                             'Employee': name,
@@ -447,12 +447,12 @@ class ScheduleManager:
                             'Description': f'{name} has less than 11h rest before {shift_name}-{role}'
                         })
 
-        return violations
+        return errors
 
 
-    def check_vacation_violation(self, cache):
-        """Violations where an employee is assigned on a day they are on vacation."""
-        violations = []
+    def check_vacation_error(self, cache):
+        """Errors where an employee is assigned on a day they are on vacation."""
+        errors = []
 
         for date_val, shifts in cache.shifts_schedule.items():
             for shift_id, roles in shifts.items():
@@ -460,7 +460,7 @@ class ScheduleManager:
                 for role, emp_id in roles.items():
                     if emp_id is not None and cache.is_on_leave(emp_id, date_val):
                         name = cache.employees.get(emp_id, {}).get('name', f'ID {emp_id}')
-                        violations.append({
+                        errors.append({
                             'Date': date_val.strftime('%d.%m.%Y'),
                             'Shift': f'{shift_name}-{role}',
                             'Employee': name,
@@ -468,12 +468,12 @@ class ScheduleManager:
                             'Description': f'{name} is on vacation but assigned to {shift_name}-{role}'
                         })
 
-        return violations
+        return errors
 
 
-    def check_night_shift_violation(self, cache):
-        """Violations where an employee worked more than 5 days of night shifts in the month."""
-        violations = []
+    def check_night_shift_error(self, cache):
+        """Errors where an employee worked more than 5 days of night shifts in the month."""
+        errors = []
 
         night_days = {}  # employee_id -> set of dates with a night shift
         for date_val, shifts in cache.shifts_schedule.items():
@@ -487,12 +487,12 @@ class ScheduleManager:
         for emp_id, dates in night_days.items():
             if len(dates) > 5:
                 name = cache.employees.get(emp_id, {}).get('name', f'ID {emp_id}')
-                violations.append({
-                    'Date': '-',
+                errors.append({
+                    'Date': 'Multiple',
                     'Shift': 'Night shifts',
                     'Employee': name,
                     'Type': 'Night shift limit',
                     'Description': f'{name} worked {len(dates)} night shifts (limit=5)'
                 })
 
-        return violations
+        return errors
