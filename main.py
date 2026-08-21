@@ -33,9 +33,10 @@ class Homepage:
         st.title("Initial Admin Registration")
         st.info("No administrators found. Please create the first SUPER Admin account.")
         with st.form("registration_form", width="content"):
-            username = st.text_input("Username")
-            password = st.text_input("Password", type="password")
-            confirm_password = st.text_input("Confirm Password", type="password")
+            st.caption("SUPER Admin Registration. This account will have full access to the system. NOTE: The password must be at least 8 characters long, and include at least one uppercase letter and one symbol.")
+            username = st.text_input("Username", placeholder="Enter username")
+            password = st.text_input("Password", type="password", placeholder="Enter password")
+            confirm_password = st.text_input("Confirm Password", type="password", placeholder="Confirm password")
             if st.form_submit_button("Register SUPER Admin"):
                 success, message = self.auth_manager.register_super_admin(username, password, confirm_password)
                 if success:

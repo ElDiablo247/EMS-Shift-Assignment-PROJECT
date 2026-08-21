@@ -34,12 +34,19 @@ class StaffManager:
 
     def add_vacation(self, employee_id, start_date, end_date):
         """Expands the date range into individual dates and inserts one row per date."""
+        employees = self.dao.get_all_employees()
+        if employee_id not in employees['id'].values:
+            return False, "Validation failed: Employee ID does not exist."
         if not employee_id:
             return False, "Validation failed: Employee ID is missing."
+        if employee_id < 6001:
+            return False, "Validation failed: Employee ID is below the valid range."
         if not start_date:
             return False, "Validation failed: Start date is missing."
         if not end_date:
             return False, "Validation failed: End date is missing."
+        if end_date < start_date:
+            return False, "Validation failed: End date cannot be before start date."
         
         from datetime import timedelta
         current = start_date
