@@ -1,6 +1,5 @@
 import streamlit as st
 from logic.auth_manager import AuthManager
-from logic.constraint_manager import ConstraintManager
 import time
 
 
@@ -10,7 +9,6 @@ st.set_page_config(page_title="Schedule Generator and EMS management", layout="w
 class Homepage:
     def __init__(self):
         self.auth_manager = AuthManager()
-        self.constraint_manager = ConstraintManager()
 
 
     def render_login(self):
