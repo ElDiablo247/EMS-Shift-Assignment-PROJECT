@@ -316,6 +316,10 @@ class ScheduleManager:
         Handles all validation and shift-name resolution; commits only the swapped days."""
         if not (isinstance(date_range, tuple) and len(date_range) == 2):
             return False, "Please select a full date range (start and end)."
+        if not shift_a_name or not shift_b_name:
+            return False, "Please select both shifts before executing the swap."
+        if role not in ("RS", "RH"):
+            return False, "Please select a valid role (RS or RH)."
 
         start_date, end_date = date_range
         if (start_date.year, start_date.month) != (end_date.year, end_date.month):
@@ -387,7 +391,7 @@ class ScheduleManager:
                         'Shift': ', '.join(assigned),
                         'Employee': name,
                         'Type': 'Double shift',
-                        'Description': f'{name} assigned to {", ".join(assigned)} on same day'
+                        'Description': f'Employee assigned to {", ".join(assigned)} on same day'
                     })
 
         return errors
@@ -419,7 +423,7 @@ class ScheduleManager:
                             'Shift': shift_name,
                             'Employee': name,
                             'Type': 'Missing paramedic',
-                            'Description': f'{shift_name} RS slot filled by {name} ({qual}), not a paramedic'
+                            'Description': 'Employee is not a paramedic'
                         })
 
         return errors
@@ -444,7 +448,7 @@ class ScheduleManager:
                             'Shift': f'{shift_name}-{role}',
                             'Employee': name,
                             'Type': '11-hour rest',
-                            'Description': f'{name} has less than 11h rest before {shift_name}-{role}'
+                            'Description': 'Less than 11h rest before {shift_name}-{role}'
                         })
 
         return errors
@@ -465,7 +469,7 @@ class ScheduleManager:
                             'Shift': f'{shift_name}-{role}',
                             'Employee': name,
                             'Type': 'On leave',
-                            'Description': f'{name} is on vacation but assigned to {shift_name}-{role}'
+                            'Description': 'On vacation but assigned to {shift_name}-{role}'
                         })
 
         return errors
@@ -488,11 +492,11 @@ class ScheduleManager:
             if len(dates) > 5:
                 name = cache.employees.get(emp_id, {}).get('name', f'ID {emp_id}')
                 errors.append({
-                    'Date': 'Multiple',
+                    'Date': 'Multiple dates',
                     'Shift': 'Night shifts',
                     'Employee': name,
                     'Type': 'Night shift limit',
-                    'Description': f'{name} worked {len(dates)} night shifts (limit=5)'
+                    'Description': 'Worked ' + str(len(dates)) + ' night shifts (limit=5)'
                 })
 
         return errors

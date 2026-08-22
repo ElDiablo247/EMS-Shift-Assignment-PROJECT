@@ -12,9 +12,9 @@ class ShiftPage:
 
     def add_shift_section(self):
         """Section for adding new shifts to the system."""
-        st.header("Shift Registration")
-        name = st.text_input("Shift Name")
-        start = st.time_input("Start Time", value=None)
+        st.caption("Shift Registration Widget")
+        name = st.text_input("Shift Name", placeholder="e.g. Shift 3")
+        start = st.time_input("Start Time", value=None, help="NOTE: Shift max. time duration, is 10 hours & 45 minutes. If shift is between 6 and 9 hours, a 30-minute break is deducted. If shift is between 9 and 10 hours & 45 minutes, a 45-minute break is deducted.")
         end = st.time_input("End Time", value=None)
         runs_on_weekend_or_holiday = st.checkbox("Runs on Weekends/Holidays")
         
@@ -26,26 +26,6 @@ class ShiftPage:
                 st.rerun()
             else:
                 st.error(message)
-
-
-    def delete_shift_section(self):
-        """Section for deleting shifts from the system."""
-        st.header("Delete Shift")
-        with st.form("delete_shift_form", clear_on_submit=True):
-            id_to_delete = st.number_input("Shift ID", value=None, placeholder="Shift ID to delete")
-            submitted = st.form_submit_button("Delete Shift")
-            if submitted:
-                if st.session_state.get('role') == 'basic':
-                    st.error('Only "super" admins are allowed to delete.')
-                    return
-                
-                success, message = self.shift_manager.delete_shift(id_to_delete)
-                if success:
-                    st.success(message)
-                    time.sleep(1.5)
-                    st.rerun()
-                else:
-                    st.error(message)
 
 
     def display_shift_table(self):
@@ -66,12 +46,16 @@ class ShiftPage:
             "is_active": st.column_config.CheckboxColumn("Active", required=True)
         }
         
+        disabled_cols = ["id", "shift_duration"]  # duration is derived from start/end times
+        if st.session_state.get("role") == "basic":
+            disabled_cols.append("is_active")
+
         edited_df = st.data_editor(
             shifts,
             column_config=column_config,
-            width='stretch',
+            width='content',
             hide_index=True,
-            disabled=["id"]
+            disabled=disabled_cols
         )
         if st.button("Save Changes"):
             success, message = self.shift_manager.update_shifts(edited_df)
@@ -91,7 +75,7 @@ class ShiftPage:
                 self.add_shift_section()
         
         # Main area: Display only 
-        with st.container(border=True):
+        with st.container(border=True, width='content'):
             self.display_shift_table()
 
 

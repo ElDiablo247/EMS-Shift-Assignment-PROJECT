@@ -1,5 +1,6 @@
 from repository.dao import DatabaseAccess
 from datetime import datetime
+import pandas as pd
 
 
 class ShiftManager:
@@ -59,6 +60,21 @@ class ShiftManager:
 
 
     def update_shifts(self, shifts_df):
+        """
+        Recalculates the duration of every shift from its start/end times before saving, so the stored duration is always 
+        a derived value. Rejects the update if any shift falls outside the valid range.
+        """
+        for idx, row in shifts_df.iterrows():
+            if pd.isna(row["id"]):
+                continue
+            duration = self.calculate_shift_duration(row["shift_start"], row["shift_end"])
+            if duration is None:
+                return False, (
+                    f"Validation failed for shift ID {row['id']}: "
+                    "Shift total time must be between 6 hours and 10 hours 45 minutes."
+                )
+            shifts_df.at[idx, "shift_duration"] = duration
+
         if self.dao.update_shifts(shifts_df):
             return True, "Shift definitions updated successfully."
         return False, "Failed to update shift definitions."

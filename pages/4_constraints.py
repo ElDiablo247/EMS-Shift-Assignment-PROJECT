@@ -15,7 +15,7 @@ class ConstraintsPage:
 
 
     def create_defaults_section(self):
-        st.info("Populate the system with default constraint values.")
+        st.caption("Populate the system with default constraint values.")
         if st.button("Create Default Constraints"):
             success, message = self.constraint_manager.populate_constraints()
             if success:
@@ -28,14 +28,14 @@ class ConstraintsPage:
 
     def contract_constraints_section(self):
         """Section for configuring the baseline full-time hours."""
-        st.info("Define how many hours per week should an employee with a 100% Full-Time contract work.")
+        st.caption("Define how many hours per week should an employee with a 100% Full-Time contract work.")
 
         options = [35.0, 35.5, 36.0, 36.5, 37.0, 37.5, 38.0, 38.5, 39.0, 39.5, 40.0, 40.5, 41.0, 41.5, 42.0, 42.5]
         selected_hours = st.selectbox(
             "Select Full-Time Hours per Week",
             options=options,
             index=None,
-            placeholder="Select Full-Time Hours",
+            placeholder="e.g. 40.0",
         )
         if st.button("Save changes"):
             success, message = self.constraint_manager.update_single_constraint("Contract hours", "Full-time 100%", selected_hours)
@@ -56,10 +56,10 @@ class ConstraintsPage:
 
     def holidays_region_section(self):
         """Section for managing the permanent holiday region."""
-        st.info("Select the German state the company operates in.")
+        st.caption("Select the German state the company operates in.")
 
         options=["BE", "BW", "BY", "HB", "HE", "HH", "MV", "NI", "NW", "RP", "SL", "SN", "ST", "SH", "TH"]
-        state_code = st.selectbox("State Code", options=options, index=None, placeholder="Select State Code")
+        state_code = st.selectbox("State Code", options=options, index=None, placeholder="e.g. BW (Baden-Württemberg)")
         if st.button("Save region"):
             success, message = self.constraint_manager.update_single_constraint("Holidays", "Region", state_code)
             if success:
@@ -71,9 +71,9 @@ class ConstraintsPage:
 
 
     def generate_holidays_section(self):
-        st.info("Select a year to generate public holidays, given the German state above.")
+        st.caption("Select a year to generate public holidays, given the German state above.")
 
-        year_for_holidays = st.number_input("Year", min_value=datetime.datetime.now().year - 1, max_value=2130, value=datetime.datetime.now().year, step=1, key="holiday_year")
+        year_for_holidays = st.number_input("Year", min_value=datetime.datetime.now().year - 1, max_value=2130, value=None, step=1, key="holiday_year", placeholder="e.g. 2026")
         if st.button("Generate Public Holidays"):
             success, message = self.constraint_manager.generate_year_holidays(year_for_holidays)
             if success:
@@ -87,7 +87,7 @@ class ConstraintsPage:
     def overview_section(self):
         """Displays a read-only overview of all system constraints."""
         st.header("Constraints Overview")
-        st.info("Current active rules for the system.")
+        st.caption("Current active rules for the system.")
 
         df = self.constraint_manager.get_all_constraints()
         
@@ -103,7 +103,7 @@ class ConstraintsPage:
                     "description": st.column_config.TextColumn("Description", width="large")
                 },
                 hide_index=True,
-                use_container_width=True
+                use_container_width=False,
             )
 
 
@@ -112,13 +112,23 @@ class ConstraintsPage:
         st.header("Public Holidays Overview")
         
         now = datetime.datetime.now()
-        view_year = st.number_input("View Public Holidays for Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="holiday_view_year")
+        view_year = st.number_input("View Public Holidays for Year", min_value=now.year - 1, max_value=2130, value=None, step=1, key="holiday_view_year", placeholder="e.g. 2026")
         
         holidays_df = self.constraint_manager.get_all_holidays_df(year=view_year)
         if holidays_df.empty:
             st.warning(f"No holidays found for {view_year}. Use the 'Generate Public Holidays' tool.")
         else:
-            st.dataframe(holidays_df, use_container_width=True, hide_index=True)
+            st.dataframe(
+                holidays_df,
+                column_config={
+                    "id": st.column_config.NumberColumn("ID"),
+                    "year": st.column_config.NumberColumn("Year"),
+                    "date": st.column_config.DateColumn("Date", format="DD.MM.YYYY"),
+                    "name": st.column_config.TextColumn("Name"),
+                },
+                use_container_width=True,
+                hide_index=True,
+            )
 
 
     def render_page(self):
@@ -135,13 +145,11 @@ class ConstraintsPage:
                 self.generate_holidays_section()
         
         # Main area: 50-50 constraints table and holidays table
-        col1, col2 = st.columns([4, 2], gap="medium")
-        with col1:
-            with st.container(border=True):
-                self.overview_section()
-        with col2:
-            with st.container(border=True):
-                self.display_holidays_section()
+        
+        with st.container(border=True, width='content'):
+            self.overview_section()
+        with st.container(border=True, width='content', height=600):
+            self.display_holidays_section()
 
 
 if __name__ == "__main__":

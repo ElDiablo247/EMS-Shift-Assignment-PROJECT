@@ -11,11 +11,11 @@ class AdminPage:
 
 
     def register_admin_section(self):
-        st.caption("Enter admin details. The password must be at least 8 characters long, and include at least one uppercase letter and one symbol.")
+        st.caption("Enter admin details for registration.")
         with st.form("register_admin_form", clear_on_submit=True):
             username = st.text_input("Admin Username", placeholder="Enter username")
-            password = st.text_input("Password", type="password", placeholder="Enter password")
-            confirm_password = st.text_input("Confirm Password", type="password", placeholder="Confirm password")
+            password = st.text_input("Password", type="password", placeholder="Enter password", help="Password must be at least 8 characters long, and include at least one uppercase letter and one symbol.")
+            confirm_password = st.text_input("Confirm Password", type="password", placeholder="Confirm password", help="Re-enter the password for confirmation.")
             submitted = st.form_submit_button("Add to System")
             if submitted:
                 success, message = self.auth_manager.register_basic_admin(username, password, confirm_password, "basic")
@@ -50,21 +50,23 @@ class AdminPage:
 
 
     def delete_admin_section(self):
-        st.info("Enter the admin ID you wish to delete. Note: The default super admin (ID 1) cannot be deleted.")
-        id_to_delete = st.number_input("Admin ID", min_value=1, value=None, placeholder="Admin ID to delete")
-        if st.button("Delete Admin"):
-            if id_to_delete is None:
-                st.error("Please enter an Admin ID to delete.")
-            elif id_to_delete == 1:
-                st.error("Cannot delete the default super admin.")
-            else:
-                success, message = self.auth_manager.delete_admin(id_to_delete)
-                if success:
-                    st.success(message)
-                    time.sleep(2.0)
-                    st.rerun()
+        st.caption("Enter the admin ID you wish to delete.")
+        with st.form("delete_admin_form", clear_on_submit=True):
+            id_to_delete = st.number_input("Admin ID", min_value=1, value=None, placeholder="Admin ID to delete", help="Note: The default super admin (ID 1) cannot be deleted.")
+            submitted = st.form_submit_button("Delete Admin")
+            if submitted:
+                if id_to_delete is None:
+                    st.error("Please enter an Admin ID to delete.")
+                elif id_to_delete == 1:
+                    st.error("Cannot delete the default super admin.")
                 else:
-                    st.error(message)
+                    success, message = self.auth_manager.delete_admin(id_to_delete)
+                    if success:
+                        st.success(message)
+                        time.sleep(2.0)
+                        st.rerun()
+                    else:
+                        st.error(message)
 
 
     def render_page(self):
