@@ -15,7 +15,7 @@ class AdminPage:
         with st.form("register_admin_form", clear_on_submit=True):
             username = st.text_input("Admin Username", placeholder="Enter username")
             password = st.text_input("Password", type="password", placeholder="Enter password", help="Password must be at least 8 characters long, and include at least one uppercase letter and one symbol.")
-            confirm_password = st.text_input("Confirm Password", type="password", placeholder="Confirm password", help="Re-enter the password for confirmation.")
+            confirm_password = st.text_input("Confirm Password", type="password", placeholder="Re-enter password", help="Re-enter the password for confirmation.")
             submitted = st.form_submit_button("Add to System")
             if submitted:
                 success, message = self.auth_manager.register_basic_admin(username, password, confirm_password, "basic")

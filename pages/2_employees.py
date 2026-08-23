@@ -38,7 +38,7 @@ class EmployeePage:
         """Section for adding employee vacation."""
         st.caption("Register an employee vacation.")
         with st.form("register_vacation_form", clear_on_submit=True):
-            employee_id = st.number_input("Employee ID", value=None, min_value=6001, step=1, key="vac_emp_id", placeholder="e.g. 6012")
+            employee_id = st.number_input("Employee ID", value=None, step=1, key="vac_emp_id", placeholder="e.g. 6012")
             vacation_start = st.date_input(
                 "Vacation Start Date",
                 value=None,
@@ -135,7 +135,7 @@ class EmployeePage:
                     "employee_name": st.column_config.TextColumn("Employee Name"),
                     "vacation_date": st.column_config.DateColumn("Vacation Date", format="DD.MM.YYYY"),
                 },
-                use_container_width=True,
+                width='stretch',
                 hide_index=True,
                 height=750
             )
@@ -153,12 +153,12 @@ class EmployeePage:
                 self.delete_vacation_section()
 
         # Main Area. On the left, the Employees table, and on the right, the Vacation table.
-        col1, col2 = st.columns([6, 4], gap="medium")
+        col1, col2 = st.columns(2, gap="medium")
         with col1:
-            with st.container(border=True):
+            with st.container(border=True, width='stretch'):
                 self.display_employee_table()
         with col2:
-            with st.container(border=True):
+            with st.container(border=True, width='stretch'):
                 self.display_vacation_section()
 
 

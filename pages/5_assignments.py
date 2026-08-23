@@ -17,13 +17,14 @@ class AssignmentPage:
 
     def display_schedule_section(self):
         """Section for displaying the generated shift assignments."""
-        st.header("Schedule Overview")
-        
         now = datetime.datetime.now()
-        col1, col2 = st.columns(2)
+
+        col1, col2, col3 = st.columns(3, width=900)
         with col1:
-            view_month = st.selectbox("View Month", range(1, 13), index=now.month - 1, key="view_month")
+            st.subheader("Schedule Overview")
         with col2:
+            view_month = st.selectbox("View Month", range(1, 13), index=now.month - 1, key="view_month")
+        with col3:
             view_year = st.number_input("View Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="view_year")
         st.subheader(f"Showing: {view_month}/{view_year}")
 
@@ -72,7 +73,7 @@ class AssignmentPage:
         st.header("Employee Worktime Overview")
         
         now = datetime.datetime.now()
-        col1, col2, col3 = st.columns([1, 1, 3])
+        col1, col2, col3 = st.columns([1, 1, 1])
         with col1:
             view_month = st.selectbox("Month", range(1, 13), index=now.month - 1, key="eh_month")
         with col2:
@@ -219,13 +220,13 @@ class AssignmentPage:
         with st.container(border=True):
             self.display_schedule_section()
 
-        left, right = st.columns([7, 5])
+        left, right = st.tabs(["Employee Hours", "Errors Overview"])
         with left:
             with st.container(border=True):
-                self.errors_section()
+                self.employee_hours_section()
         with right:
             with st.container(border=True):
-                self.employee_hours_section()
+                self.errors_section()
 
 
 if __name__ == "__main__":
