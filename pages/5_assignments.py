@@ -18,15 +18,14 @@ class AssignmentPage:
     def display_schedule_section(self):
         """Section for displaying the generated shift assignments."""
         now = datetime.datetime.now()
+        st.subheader("Schedule Overview", text_alignment="center")
 
-        col1, col2, col3 = st.columns(3, width=900)
-        with col1:
-            st.subheader("Schedule Overview")
+        col2, col3 = st.columns(2, vertical_alignment="center", width='stretch')
         with col2:
             view_month = st.selectbox("View Month", range(1, 13), index=now.month - 1, key="view_month")
         with col3:
             view_year = st.number_input("View Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="view_year")
-        st.subheader(f"Showing: {view_month}/{view_year}")
+        st.subheader(f"Showing schedule from {view_month}/{view_year}", text_alignment="center")
 
         df = self.schedule_manager.get_assignments_pivot(view_month, view_year)
 
@@ -52,7 +51,7 @@ class AssignmentPage:
                 edited_df = st.data_editor(
                     df, 
                     column_config=column_config, 
-                    use_container_width=True, 
+                    width='content', 
                     hide_index=True, 
                     height='content',
                     key="monthly_assignments_editor"
@@ -70,39 +69,32 @@ class AssignmentPage:
 
     def employee_hours_section(self):
         """Display target and completed hours for all active employees for the selected month and year."""
-        st.header("Employee Worktime Overview")
-        
         now = datetime.datetime.now()
-        col1, col2, col3 = st.columns([1, 1, 1])
-        with col1:
-            view_month = st.selectbox("Month", range(1, 13), index=now.month - 1, key="eh_month")
-        with col2:
-            view_year = st.number_input("Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="eh_year")
-        with col3:
-            if st.button("Display", use_container_width=True, key="eh_display"):
-                st.subheader(f"Showing: {view_month}/{view_year}")
-                st.session_state["hours_target"] = (view_month, view_year)
 
-        target = st.session_state.get("hours_target")
-        if not target:
-            st.info("Select a month and year, then click Display.")
-            return
+        col1, col2, col3 = st.columns([1, 1, 1], width=600)
+        with col1:
+            st.subheader("Worktime Overview")
+        with col2:
+            view_month = st.selectbox("Month", range(1, 13), index=now.month - 1, key="eh_month")
+        with col3:
+            view_year = st.number_input("Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="eh_year")
         
-        target_month, target_year = target
-        df = self.schedule_manager.get_employee_hours_pivot(target_month, target_year)
-        
+        st.subheader(f"Showing: {view_month}/{view_year}", text_alignment="center")
+
+        df = self.schedule_manager.get_employee_hours_pivot(view_month, view_year)
         if df.empty:
             st.warning("No employee data found.")
         else:
-            st.data_editor(
+            st.dataframe(
                 df,
                 column_config={
-                    "Employee": st.column_config.TextColumn("Employee", disabled=True),
-                    "Role": st.column_config.TextColumn("Role", disabled=True),
-                    "Target Hours": st.column_config.NumberColumn("Target Hours", disabled=True),
-                    "Completed Hours": st.column_config.NumberColumn("Completed Hours", disabled=True),
+                    "Employee": st.column_config.TextColumn("Employee"),
+                    "Role": st.column_config.TextColumn("Role"),
+                    "Target Hours": st.column_config.NumberColumn("Target Hours"),
+                    "Completed Hours": st.column_config.NumberColumn("Completed Hours"),
                 },
-                use_container_width=True,
+                width=700,
+                height=650,
                 hide_index=True,
                 key="employee_hours_editor"
             )
@@ -110,7 +102,7 @@ class AssignmentPage:
 
     def errors_section(self):
         """Section for scanning the schedule for constraint errors."""
-        st.header("Errors Overview")
+        st.subheader("Errors Overview")
         st.info("Scan for constraint errors (11-hour rest, double shifts, vacations, missing paramedics and night shift fairness).")
 
         now = datetime.datetime.now()
@@ -222,7 +214,7 @@ class AssignmentPage:
 
         left, right = st.tabs(["Employee Hours", "Errors Overview"])
         with left:
-            with st.container(border=True):
+            with st.container(border=True, width='content'):
                 self.employee_hours_section()
         with right:
             with st.container(border=True):
