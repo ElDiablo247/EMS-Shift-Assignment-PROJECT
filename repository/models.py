@@ -6,7 +6,7 @@ class Base(DeclarativeBase):
     pass
 
 class Employee(Base):
-    __tablename__ = 'employees'
+    __tablename__ = 'employee'
     
     id = Column(Integer, primary_key=True, nullable=False)
     name = Column(String, nullable=False)
@@ -17,7 +17,7 @@ class Employee(Base):
 
 
 class Shift(Base):
-    __tablename__ = 'shifts'
+    __tablename__ = 'shift'
     
     id = Column(Integer, primary_key=True, nullable=False)
     shift_name = Column(String, nullable=False)
@@ -29,7 +29,7 @@ class Shift(Base):
 
 
 class Admin(Base):
-    __tablename__ = 'admins'
+    __tablename__ = 'admin'
     
     id = Column(Integer, primary_key=True, nullable=False)
     username = Column(String, unique=True, nullable=False)
@@ -38,12 +38,12 @@ class Admin(Base):
 
 
 class Assignment(Base):
-    __tablename__ = 'assignments'
+    __tablename__ = 'assignment'
     
     id = Column(Integer, primary_key=True)
     date = Column(Date, nullable=False, index=True)
-    shift_id = Column(Integer, ForeignKey('shifts.id'), nullable=False)
-    employee_id = Column(Integer, ForeignKey('employees.id'), nullable=True)
+    shift_id = Column(Integer, ForeignKey('shift.id'), nullable=False)
+    employee_id = Column(Integer, ForeignKey('employee.id'), nullable=True)
     role = Column(String, nullable=False)
     is_holidays = Column(Boolean, nullable=False)
 
@@ -63,7 +63,7 @@ class Constraint(Base):
 
 
 class Holiday(Base):
-    __tablename__ = 'holidays'
+    __tablename__ = 'holiday'
     
     id = Column(Integer, primary_key=True)
     year = Column(Integer, nullable=False)
@@ -72,8 +72,8 @@ class Holiday(Base):
 
 
 class Vacation(Base):
-    __tablename__ = 'vacations'
+    __tablename__ = 'vacation'
     
     id = Column(Integer, primary_key=True)
-    employee_id = Column(Integer, ForeignKey('employees.id'), nullable=False)
+    employee_id = Column(Integer, ForeignKey('employee.id'), nullable=False)
     vacation_date = Column(Date, nullable=False)

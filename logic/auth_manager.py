@@ -40,11 +40,11 @@ class AuthManager:
             return False, "Passwords do not match."
         if not self.is_password_strong(password):
             return False, "Password must be at least 8 characters long, and include at least one uppercase letter and one symbol."
-
         if self.dao.get_admin_details(username)[0] is not None:
             return False, "Username already exists."
         
         hashed_pw = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+        
         success = self.dao.add_basic_admin(username, hashed_pw, role=role)
         if success:
             return True, "Basic admin registered successfully."
