@@ -127,6 +127,7 @@ class ConstraintsPage:
                     "name": st.column_config.TextColumn("Name"),
                 },
                 use_container_width=True,
+                height=650,
                 hide_index=True,
             )
 
@@ -145,11 +146,13 @@ class ConstraintsPage:
                 self.generate_holidays_section()
         
         # Main area: 50-50 constraints table and holidays table
-        
-        with st.container(border=True, width='content'):
-            self.overview_section()
-        with st.container(border=True, width='content', height=600):
-            self.display_holidays_section()
+        col1, col2 = st.columns(2, gap="small")
+        with col1:
+            with st.container(border=True, width='content'):
+                self.overview_section()
+        with col2:
+            with st.container(border=True, width='content', height=650):
+                self.display_holidays_section()
 
 
 if __name__ == "__main__":

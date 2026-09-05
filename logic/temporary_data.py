@@ -8,15 +8,15 @@ class Cache:
         self.month = None
         self.year = None
         self.dates = []
-        self.holidays = set()
-        self.shifts = {}
-        self.shifts_schedule = {}
         self.employees = {}
+        self.shifts = {}
+        self.holidays = set()
+        self.vacations = {}
+        self.shifts_schedule = {}
         self.weekday_weeks = {}
         self.employee_hours = {}
         self.assigned_employees_for_date = {}
         self.prev_month_shift_pattern = {}
-        self.vacations = {}
 
 
     def set_up_cache(self, month, year, holidays_df, shifts_df, employees_df, assignments_df, vacations_df, ft_hours):
@@ -42,7 +42,7 @@ class Cache:
 
     def _store_holidays(self, df):
         """Converts the holidays DataFrame into a fast-lookup set of date objects."""
-        if not df.empty and 'date' in df.columns:
+        if not df.empty:
             self.holidays = set(pd.to_datetime(df['date']).dt.date)
 
 
@@ -76,7 +76,7 @@ class Cache:
 
 
     def _map_employees_to_hours(self, fulltime_weekly_hours, assignments_df, shifts_df):
-        """Calculate target and completed hours for each employee for the specified month and year. Also accounts for vacation days in completed hours for non-flexible contracts."""
+        """Calculate target and completed hours for each employee for the specified month and year. Also accounts for vacation days in completed hours."""
         working_days = sum(1 for d in self.dates if d.weekday() < 5 and d not in self.holidays)
         
         shift_duration_map = dict(zip(shifts_df['id'], shifts_df['shift_duration']))
@@ -153,7 +153,7 @@ class Cache:
             # Check if it's a weekday (0=Mon, 1=Tue, 2=Wed, 3=Thu, 4=Fri) and exists in shifts_schedule
             if current_date.weekday() < 5 and current_date in self.shifts_schedule:
                 week_key = f"week{week_number}"
-                self.weekday_weeks.setdefault(week_key, {})[current_date] = self.shifts_schedule[current_date]
+                self.weekday_weeks.setdefault(week_key, []).append(current_date)
 
 
     def _map_assigned_employees_for_date(self):
