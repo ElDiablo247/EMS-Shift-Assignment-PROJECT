@@ -15,6 +15,66 @@ class AssignmentPage:
         self.shift_manager = ShiftManager()
 
 
+    def generate_schedule_section(self):
+        """One-click: generates the full schedule (template + RS + RH) in one shot."""
+        st.info("Generate the complete schedule — all stages in memory, single DB commit.")
+        now = datetime.datetime.now()
+        col_1, col_2 = st.columns(2)
+        with col_1:
+            month = st.selectbox("Month", range(1, 13), index=now.month - 1, key="gs_month")
+        with col_2:
+            year = st.number_input("Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="gs_year")
+        if st.button("Generate Full Schedule", use_container_width=True):
+            with st.spinner("Generating schedule in memory..."):
+                success, message = self.schedule_manager.generate_full_schedule(month, year)
+            if success:
+                st.success(message)
+                time.sleep(1.5)
+                st.rerun()
+            else:
+                st.error(message)
+                time.sleep(2)
+                st.rerun()
+
+
+    def swap_shifts_section(self):
+        """Bulk-swap employees between two shift-role slots across a date range."""
+        st.info("Swap employees between two shifts for a specific role across a date range.")
+        now = datetime.datetime.now()
+
+        default_range = (
+            datetime.date(now.year, now.month, 1),
+            datetime.date(now.year, now.month, now.day),
+        )
+        date_range = st.date_input("Date range", value=default_range, key="swap_range")
+
+        active_shift_names = self.shift_manager.return_shift_names()
+        if not active_shift_names:
+            st.warning("No active shifts found.")
+            return
+
+        col_a, col_b = st.columns(2)
+        with col_a:
+            shift_a_name = st.selectbox("Shift A", active_shift_names, key="swap_shift_a")
+        with col_b:
+            shift_b_name = st.selectbox("Shift B", active_shift_names, key="swap_shift_b")
+
+        role = st.selectbox("Role", ["RS", "RH"], key="swap_role")
+
+        if st.button("Execute Swap", use_container_width=True, key="swap_button"):
+            success, message = self.schedule_manager.swap_shift_employees(
+                date_range, shift_a_name, shift_b_name, role
+            )
+            if success:
+                st.success(message)
+                time.sleep(1.5)
+                st.rerun()
+            else:
+                st.error(message)
+                time.sleep(2)
+                st.rerun()
+
+
     def display_schedule_section(self):
         """Section for displaying the generated shift assignments."""
         now = datetime.datetime.now()
@@ -139,66 +199,6 @@ class AssignmentPage:
             )
         else:
             st.success("No errors found — schedule is clean!")
-
-
-    def generate_schedule_section(self):
-        """One-click: generates the full schedule (template + RS + RH) in one shot."""
-        st.info("Generate the complete schedule — all stages in memory, single DB commit.")
-        now = datetime.datetime.now()
-        col_1, col_2 = st.columns(2)
-        with col_1:
-            month = st.selectbox("Month", range(1, 13), index=now.month - 1, key="gs_month")
-        with col_2:
-            year = st.number_input("Year", min_value=now.year - 1, max_value=2130, value=now.year, step=1, key="gs_year")
-        if st.button("Generate Full Schedule", use_container_width=True):
-            with st.spinner("Generating schedule in memory..."):
-                success, message = self.schedule_manager.generate_schedule(month, year)
-            if success:
-                st.success(message)
-                time.sleep(1.5)
-                st.rerun()
-            else:
-                st.error(message)
-                time.sleep(2)
-                st.rerun()
-
-
-    def swap_shifts_section(self):
-        """Bulk-swap employees between two shift-role slots across a date range."""
-        st.info("Swap employees between two shifts for a specific role across a date range.")
-        now = datetime.datetime.now()
-
-        default_range = (
-            datetime.date(now.year, now.month, 1),
-            datetime.date(now.year, now.month, now.day),
-        )
-        date_range = st.date_input("Date range", value=default_range, key="swap_range")
-
-        active_shift_names = self.shift_manager.return_shift_names()
-        if not active_shift_names:
-            st.warning("No active shifts found.")
-            return
-
-        col_a, col_b = st.columns(2)
-        with col_a:
-            shift_a_name = st.selectbox("Shift A", active_shift_names, key="swap_shift_a")
-        with col_b:
-            shift_b_name = st.selectbox("Shift B", active_shift_names, key="swap_shift_b")
-
-        role = st.selectbox("Role", ["RS", "RH"], key="swap_role")
-
-        if st.button("Execute Swap", use_container_width=True, key="swap_button"):
-            success, message = self.schedule_manager.swap_shift_employees(
-                date_range, shift_a_name, shift_b_name, role
-            )
-            if success:
-                st.success(message)
-                time.sleep(1.5)
-                st.rerun()
-            else:
-                st.error(message)
-                time.sleep(2)
-                st.rerun()
 
 
     def render_page(self):

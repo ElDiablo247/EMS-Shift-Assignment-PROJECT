@@ -113,7 +113,7 @@ class Cache:
             }
 
 
-    def return_flattened_empty_template(self):
+    def return_flattened_shifts_schedule(self):
         """
         Flattens the nested shifts_schedule dictionary into a list of database-ready dictionaries.
         It also determines the 'is_holidays' boolean for each assignment dynamically.
@@ -127,7 +127,7 @@ class Cache:
                         'date': date_val,
                         'shift_id': shift_id,
                         'role': role,
-                        'employee_id': employee_id,  # Will be None for templates
+                        'employee_id': employee_id,
                         'is_holidays': is_holiday
                     })
         return flat_list

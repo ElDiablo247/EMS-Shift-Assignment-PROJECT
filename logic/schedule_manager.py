@@ -11,14 +11,33 @@ class ScheduleManager:
         self.dao = DatabaseAccess()
 
 
-    def generate_template(self, month, year):
-        """Builds the empty template in memory. Returns (cache, None) on success,
-        or (None, error_msg) if a schedule already exists for this month.
-        Does NOT commit to DB — the caller chains into the next stage."""
+    def generate_full_schedule(self, month, year):
+        """This function executes all schedule generation stages."""
         first_day_of_month = datetime.date(year, month, 1)
         if self.dao.assignments_exist_for_date(first_day_of_month):
-            return None, "A schedule template for the given month and year already exists!"
+            return False, "A schedule template for the given month and year already exists!"
 
+        # Stage 1. Empty template Generation
+        cache = self.generate_template(month, year)
+
+        # Stage 2. Generation of paramedic assignments (RS)
+        cache = self.assign_paramedics(cache)
+
+        # Stage 3. Generation of assistant assignments (RH)
+        cache = self.assign_rest_of_employees(cache)
+
+        # Flatten the shifts_schedule nested dictionary into a list of dictionaries for database insertion
+        flattened_schedule = cache.return_flattened_shifts_schedule()
+
+        # Insert the flattened schedule into the database
+        if self.dao.bulk_insert_assignments(flattened_schedule):
+            return True, f"Full schedule for {month}/{year} generated and saved!"
+        return False, "Database error: Failed to save the schedule."
+
+
+    def generate_template(self, month, year):
+        """Builds the empty template in memory and returns the populated Cache.
+        Does NOT commit to DB — the caller chains into the next stage."""
         cache = self.generate_cache(month, year)
 
         for date in cache.dates:
@@ -37,16 +56,7 @@ class ScheduleManager:
 
         cache._map_weekdays_to_weeks()
         cache._map_assigned_employees_for_date()
-        return cache, None
-
-
-    def generate_schedule(self, month, year):
-        """One-shot: template → RS → RH → single DB commit."""
-        cache, error_message = self.generate_template(month, year)
-        if error_message:
-            return False, error_message
-        cache = self.assign_paramedics(cache)
-        return self.assign_rest_of_employees(cache)
+        return cache
 
 
     def generate_cache(self, month, year):
@@ -107,8 +117,8 @@ class ScheduleManager:
 
 
     def assign_rest_of_employees(self, cache):
-        """Assigns assistants (RH) to the given Cache in memory,
-        then commits the FULL schedule to the database in one shot."""
+        """Assigns assistants (RH) to the given Cache in memory.
+        Does NOT commit to DB — returns the cache for the caller to persist."""
         shift_ids = cache.get_shift_ids()
 
         for contract_type in ["100%", "75%", "50%", "Flexible"]:
@@ -120,10 +130,7 @@ class ScheduleManager:
                 for local_shift_id in shift_ids:
                     self.assign_week_with_rest_employees(cache, local_shift_id, dates_dict, employee_ids)
 
-        flat = cache.return_flattened_empty_template()
-        if self.dao.bulk_insert_assignments(flat):
-            return True, f"Full schedule for {cache.month}/{cache.year} generated and saved!"
-        return False, "Database error: Failed to save the schedule."
+        return cache
 
 
     def assign_week_with_rest_employees(self, cache, shift_id, dates_dict, employee_ids):
