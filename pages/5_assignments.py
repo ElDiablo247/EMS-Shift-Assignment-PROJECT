@@ -17,7 +17,7 @@ class AssignmentPage:
 
     def generate_schedule_section(self):
         """One-click: generates the full schedule (template + RS + RH) in one shot."""
-        st.info("Generate the complete schedule — all stages in memory, single DB commit.")
+        st.caption("Select a month and year to generate the weekday schedule.")
         now = datetime.datetime.now()
         col_1, col_2 = st.columns(2)
         with col_1:
@@ -39,7 +39,7 @@ class AssignmentPage:
 
     def swap_shifts_section(self):
         """Bulk-swap employees between two shift-role slots across a date range."""
-        st.info("Swap employees between two shifts for a specific role across a date range.")
+        st.caption("Swap employees between two shifts for a specific role across a date range.")
         now = datetime.datetime.now()
 
         default_range = (
