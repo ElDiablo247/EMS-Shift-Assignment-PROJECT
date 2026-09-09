@@ -332,7 +332,7 @@ class DatabaseAccess:
             return []
 
 
-    def insert_empty_assignment(self, date, shift_id, role, is_holidays, employee_id=None):
+    def insert_empty_assignment(self, date, shift_id, qualification, is_holidays, employee_id=None):
         """Inserts a single assignment record into the database."""
         try:
             with self.db.get_session() as session:
@@ -340,7 +340,7 @@ class DatabaseAccess:
                     date=date,
                     shift_id=shift_id,
                     employee_id=employee_id,
-                    role=role,
+                    qualification=qualification,
                     is_holidays=is_holidays
                 )
                 session.add(new_assignment)
@@ -425,7 +425,7 @@ class DatabaseAccess:
                     assignment = session.query(Assignment).filter(
                         Assignment.date == update['date'],
                         Assignment.shift_id == update['shift_id'],
-                        Assignment.role == update['role']
+                        Assignment.qualification == update['qualification']
                     ).first()
                     if assignment:
                         assignment.employee_id = update['employee_id']

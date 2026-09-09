@@ -53,9 +53,10 @@ class Cache:
 
 
     def _store_shifts(self, df):
-        """Converts the shifts DataFrame to a dictionary indexed by ID. Stores ALL shifts, active and inactive."""
+        """Converts the shifts DataFrame to a dictionary indexed by ID. Stores only active shifts."""
         if not df.empty and 'id' in df.columns:
-            self.shifts = df.set_index('id').to_dict('index')
+            active_shifts = df[df['is_active'] == True]
+            self.shifts = active_shifts.set_index('id').to_dict('index')
 
 
     def _store_shift_schedule(self, df):
@@ -65,14 +66,14 @@ class Cache:
         for _, row in df.iterrows():
             date_val = pd.to_datetime(row['date']).date()
             shift_id = row['shift_id']
-            role = row['role']
+            qualification = row['qualification']
             emp_id = row['employee_id']
             if pd.isna(emp_id):
                 emp_id = None
             else:
                 emp_id = int(emp_id)
 
-            self.shifts_schedule.setdefault(date_val, {}).setdefault(shift_id, {})[role] = emp_id
+            self.shifts_schedule.setdefault(date_val, {}).setdefault(shift_id, {})[qualification] = emp_id
 
 
     def _map_employees_to_hours(self, fulltime_weekly_hours, assignments_df, shifts_df):
@@ -126,7 +127,7 @@ class Cache:
                     flat_list.append({
                         'date': date_val,
                         'shift_id': shift_id,
-                        'role': role,
+                        'qualification': role,
                         'employee_id': employee_id,
                         'is_holidays': is_holiday
                     })
@@ -204,12 +205,12 @@ class Cache:
         self.prev_month_shift_pattern = {}
         for _, row in assignments_df.iterrows():
             shift_id = row['shift_id']
-            role = row['role']
+            qualification = row['qualification']
             emp_id = row['employee_id']
             if pd.notna(emp_id):
-                self.prev_month_shift_pattern.setdefault(shift_id, {})[role] = int(emp_id)
+                self.prev_month_shift_pattern.setdefault(shift_id, {})[qualification] = int(emp_id)
             else:
-                self.prev_month_shift_pattern.setdefault(shift_id, {})[role] = None
+                self.prev_month_shift_pattern.setdefault(shift_id, {})[qualification] = None
 
 
     def _apply_prev_month_pattern(self):
@@ -385,7 +386,7 @@ class Cache:
                         updates.append({
                             'date': date_val,
                             'shift_id': shift_id,
-                            'role': role,
+                            'qualification': role,
                             'employee_id': assigned_val
                         })
         return updates

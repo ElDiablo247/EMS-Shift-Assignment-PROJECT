@@ -17,8 +17,11 @@ class ScheduleManager:
         if self.dao.assignments_exist_for_date(first_day_of_month):
             return False, "A schedule template for the given month and year already exists!"
 
+        # Generate a fresh cache for the month/year
+        cache = self.generate_cache(month, year)
+
         # Stage 1. Empty template Generation
-        cache = self.generate_template(month, year)
+        cache = self.generate_template(cache)
 
         # Stage 2. Generation of paramedic assignments (RS)
         cache = self.assign_paramedics(cache)
@@ -35,22 +38,20 @@ class ScheduleManager:
         return False, "Database error: Failed to save the schedule."
 
 
-    def generate_template(self, month, year):
-        """Builds the empty template in memory and returns the populated Cache.
-        Does NOT commit to DB — the caller chains into the next stage."""
-        cache = self.generate_cache(month, year)
+    def generate_template(self, cache):
+        """Builds the empty template in memory and returns the populated Cache."""
 
         for date in cache.dates:
             cache.shifts_schedule[date] = {}
-            if date in cache.holidays or date.weekday() >= 5:
+            if date in cache.holidays or date.weekday() >= 5: # If holiday or weekend
                 for shift_id, values in cache.shifts.items():
-                    if not values.get('is_active', True):
+                    if not values['is_active']: # Skip inactive shifts
                         continue
-                    if values['runs_on_weekend_or_holiday'] == True:
+                    if values['runs_on_weekend_or_holiday']:
                         cache.shifts_schedule[date][shift_id] = {"RS": None, "RH": None}
-            else:
+            else: # If weekday
                 for shift_id, values in cache.shifts.items():
-                    if not values.get('is_active', True):
+                    if not values['is_active']: # Skip inactive shifts
                         continue
                     cache.shifts_schedule[date][shift_id] = {"RS": None, "RH": None}
 
@@ -74,19 +75,21 @@ class ScheduleManager:
 
 
     def assign_paramedics(self, cache):
-        """Assigns paramedics (RS) to the given Cache in memory.
-        Carries over the previous-month shift pattern first, then fills RS slots.
-        Does NOT commit to DB — returns cache for the next stage."""
+        """Assigns paramedics (RS) to the given Cache in memory. Carries over the previous month's 
+        shift pattern first, then fills RS slots. FInally returns cache for the next stage."""
         self._load_prev_month_shift_pattern(cache.month, cache.year, cache)
         cache._apply_prev_month_pattern()
-        shift_ids = cache.get_shift_ids()
+
+        shift_ids = cache.get_shift_ids() # Only active shifts
 
         for contract_type in ["100%", "75%", "50%"]:
             for week_key, dates_dict in cache.weekday_weeks.items():
                 employee_ids = cache.get_paramedic_ids_by_contract(contract_type)
-                if not employee_ids:
+                if not employee_ids: # Guard: If no paramedics of this contract type exist, skip to the next.
                     continue
                 random.shuffle(shift_ids)
+                random.shuffle(employee_ids)
+
                 for local_shift_id in shift_ids:
                     self.assign_week_with_paramedics(cache, local_shift_id, dates_dict, employee_ids)
 
@@ -95,25 +98,27 @@ class ScheduleManager:
 
     def assign_week_with_paramedics(self, cache, shift_id, dates_dict, employee_ids):
         """Helper function to fill a week's worth of shifts with paramedics of a specific contract type."""
-        local_employee = 'empty'
+        candidate_emp_id = 'empty' # Flag variable
 
         for date in dates_dict:
             if shift_id not in cache.shifts_schedule.get(date, {}) or cache.shifts_schedule[date][shift_id].get("RS") is not None:
                 continue # If the shift doesn't exist on this date or is already filled, skip to the next date.
             
-            if local_employee == 'empty':
-                local_employee = cache.select_eligible_employee_id(employee_ids, date)
-                if local_employee is None: 
-                    break # This means there are no more eligible employees at all so the rest of the week will remain unassigned for this shift.
-            if local_employee != 'empty' and cache.is_on_leave(local_employee, date):
-                local_employee = 'empty'
+            if candidate_emp_id == 'empty':
+                candidate_emp_id = cache.select_eligible_employee_id(employee_ids, date)
+                if candidate_emp_id is None: 
+                    break # No eligible employees left. The rest of the week will remain unassigned for this shift.
+
+            if cache.is_on_leave(candidate_emp_id, date): # If candidate employee is on vacation, reset and continue to the next date.
+                candidate_emp_id = 'empty'
                 continue
 
-            cache.shifts_schedule[date][shift_id]["RS"] = local_employee
-            cache.assigned_employees_for_date[date].add(local_employee) 
-            cache.employee_hours[local_employee]["completed_hours"] += cache.shifts[shift_id]["shift_duration"]
-            if cache.employee_hours[local_employee]["completed_hours"] >= cache.employee_hours[local_employee]["target_hours"]:
-                local_employee = 'empty'
+            cache.shifts_schedule[date][shift_id]["RS"] = candidate_emp_id 
+            cache.assigned_employees_for_date[date].add(candidate_emp_id) 
+            cache.employee_hours[candidate_emp_id]["completed_hours"] += cache.shifts[shift_id]["shift_duration"]
+
+            if cache.employee_hours[candidate_emp_id]["completed_hours"] >= cache.employee_hours[candidate_emp_id]["target_hours"]:
+                candidate_emp_id = 'empty'
 
 
     def assign_rest_of_employees(self, cache):
@@ -148,7 +153,7 @@ class ScheduleManager:
                 local_employee = cache.select_eligible_employee_for_rh(employee_ids, date, shift_id)
                 if local_employee is None:
                     break  # No more eligible employees for this shift/week, leave the rest unassigned.
-            if local_employee != 'empty' and cache.is_on_leave(local_employee, date):
+            if cache.is_on_leave(local_employee, date):
                 local_employee = 'empty'
                 continue
 
@@ -205,7 +210,7 @@ class ScheduleManager:
         df['date'] = pd.to_datetime(df['date']).dt.strftime('%d.%m - %a')
         df['employee_name'] = df['employee_name'].fillna("-")
         
-        df['shift_role'] = df['shift_name'] + ' - ' + df['role']
+        df['shift_role'] = df['shift_name'] + ' - ' + df['qualification']
         
         # Pivot: rows = dates, columns = shift_role, values = employee_name
         pivot_df = df.pivot(index='date', columns='shift_role', values='employee_name')
@@ -269,12 +274,12 @@ class ScheduleManager:
         year = self._current_view_year
         current_db = self.dao.get_assignments_for_month(int(month), year)
         
-        # 2. Format current DB into a lookup dict: (date, shift_id, role) -> employee_id
+        # 2. Format current DB into a lookup dict: (date, shift_id, qualification) -> employee_id
         db_lookup = {}
         if not current_db.empty:
             for _, row in current_db.iterrows():
                 date_val = pd.to_datetime(row['date']).date()
-                key = (date_val, row['shift_id'], row['role'])
+                key = (date_val, row['shift_id'], row['qualification'])
                 emp = row['employee_id']
                 db_lookup[key] = int(emp) if pd.notna(emp) else None
         
@@ -306,7 +311,7 @@ class ScheduleManager:
                 updates_list.append({
                     'date': date_obj,
                     'shift_id': shift_id,
-                    'role': role,
+                    'qualification': role,
                     'employee_id': new_emp_id
                 })
         
@@ -355,8 +360,8 @@ class ScheduleManager:
             if emp_a == emp_b:
                 continue  # identity swap, skip silently
             day[shift_a_id][role], day[shift_b_id][role] = emp_b, emp_a
-            updates.append({'date': date, 'shift_id': shift_a_id, 'role': role, 'employee_id': emp_b})
-            updates.append({'date': date, 'shift_id': shift_b_id, 'role': role, 'employee_id': emp_a})
+            updates.append({'date': date, 'shift_id': shift_a_id, 'qualification': role, 'employee_id': emp_b})
+            updates.append({'date': date, 'shift_id': shift_b_id, 'qualification': role, 'employee_id': emp_a})
 
         if not updates:
             return False, "No days found in the range where both shifts run."

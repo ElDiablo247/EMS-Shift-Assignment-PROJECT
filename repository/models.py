@@ -44,11 +44,11 @@ class Assignment(Base):
     date = Column(Date, nullable=False, index=True)
     shift_id = Column(Integer, ForeignKey('shift.id'), nullable=False)
     employee_id = Column(Integer, ForeignKey('employee.id'), nullable=True)
-    role = Column(String, nullable=False)
+    qualification = Column(String, nullable=False)
     is_holidays = Column(Boolean, nullable=False)
 
     __table_args__ = (
-        UniqueConstraint('date', 'shift_id', 'role', name='uq_assignment_date_shift_role'),
+        UniqueConstraint('date', 'shift_id', 'qualification', name='uq_assignment_date_shift_qualification'),
     )
 
 

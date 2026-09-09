@@ -98,28 +98,6 @@ class Developer:
         return False, "Failed to delete constraint. Please check the input and try again."
 
 
-    def dev_full_schedule_run(self, month, year):
-        """Runs all three scheduling steps at once for testing — template → paramedics → RH."""
-        sm = ScheduleManager()
-
-        # Step 1: empty template
-        success, message, _ = sm.generate_template(month, year)
-        if not success:
-            return False, f"Template failed: {message}"
-
-        # Step 2: paramedics
-        success, message = sm.assign_paramedics(month, year)
-        if not success:
-            return False, f"Paramedics failed: {message}"
-
-        # Step 3: assistants
-        success, message = sm.assign_rest_of_employees(month, year)
-        if not success:
-            return False, f"Assistants failed: {message}"
-
-        return True, f"Full schedule for {month}/{year} completed — template, paramedics, and assistants."
-
-
     def dev_delete_assignments_for_month(self, month, year):
         """Permanently deletes all assignment records for a specific month and year."""
         success, count = self.dao.dev_delete_assignments_for_month(month, year)
