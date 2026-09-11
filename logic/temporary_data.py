@@ -335,20 +335,20 @@ class Cache:
         """Returns employee IDs of the given contract_type, sorted by remaining hours
         descending (most remaining first). Excludes employees already at or over target."""
         candidates = []
-        for eid, emp in self.employees.items():
+        for emp_id, emp in self.employees.items():
             if not emp.get('is_active', True):
                 continue
             if emp.get('contract_type') != contract_type:
                 continue
-            hrs = self.employee_hours.get(eid)
-            if hrs is None:
+            emp_hours = self.employee_hours.get(emp_id)
+            if emp_hours is None:
                 continue
-            remaining = hrs['target_hours'] - hrs['completed_hours']
-            if remaining <= 0:
+            remaining_hours = emp_hours['target_hours'] - emp_hours['completed_hours']
+            if remaining_hours <= 0:
                 continue
-            candidates.append((eid, remaining))
+            candidates.append((emp_id, remaining_hours))
         candidates.sort(key=lambda x: x[1], reverse=True)
-        return [eid for eid, _ in candidates]
+        return [emp_id for emp_id, _ in candidates]
 
 
     def select_eligible_employee_for_rh(self, pool, date, shift_id):

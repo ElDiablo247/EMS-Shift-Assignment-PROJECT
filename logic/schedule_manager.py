@@ -77,8 +77,9 @@ class ScheduleManager:
     def assign_paramedics(self, cache):
         """Assigns paramedics (RS) to the given Cache in memory. Carries over the previous month's 
         shift pattern first, then fills RS slots. FInally returns cache for the next stage."""
+        
         self._load_prev_month_shift_pattern(cache.month, cache.year, cache)
-        cache._apply_prev_month_pattern()
+        cache._apply_prev_month_pattern() # Continue shift pattern of last month's weekday (excluding Friday)
 
         shift_ids = cache.get_shift_ids() # Only active shifts
 
@@ -122,9 +123,9 @@ class ScheduleManager:
 
 
     def assign_rest_of_employees(self, cache):
-        """Assigns assistants (RH) to the given Cache in memory.
-        Does NOT commit to DB — returns the cache for the caller to persist."""
-        shift_ids = cache.get_shift_ids()
+        """Assigns assistant slots (RH) to the given Cache in memory and returns the modified cache."""
+
+        shift_ids = cache.get_shift_ids() # Active shifts only
 
         for contract_type in ["100%", "75%", "50%", "Flexible"]:
             for week_key, dates_dict in cache.weekday_weeks.items():
@@ -132,6 +133,8 @@ class ScheduleManager:
                 if not employee_ids:
                     continue
                 random.shuffle(shift_ids)
+                random.shuffle(employee_ids)
+
                 for local_shift_id in shift_ids:
                     self.assign_week_with_rest_employees(cache, local_shift_id, dates_dict, employee_ids)
 
@@ -139,30 +142,28 @@ class ScheduleManager:
 
 
     def assign_week_with_rest_employees(self, cache, shift_id, dates_dict, employee_ids):
-        """Fills a week's worth of RH slots for one shift. Keeps the same employee across
-        all dates of the week until they hit their target, then picks the next eligible one.
-        Each candidate must pass: under target, not already on that date, and 11h rest."""
-        local_employee = 'empty'
+        """Helper function to fill a week's worth of shifts with employees sorted by remaining hours."""
+        candidate_emp_id = 'empty'
 
         for date in dates_dict:
-            if (shift_id not in cache.shifts_schedule.get(date, {})
-                    or cache.shifts_schedule[date][shift_id].get("RH") is not None):
+            if shift_id not in cache.shifts_schedule.get(date, {}) or cache.shifts_schedule[date][shift_id].get("RH") is not None:
+                continue # If the shift doesn't exist on this date or is already filled, skip to the next date.
+
+            if candidate_emp_id == 'empty':
+                candidate_emp_id = cache.select_eligible_employee_for_rh(employee_ids, date, shift_id)
+                if candidate_emp_id is None:
+                    break  # No eligible employees left. The rest of the week will remain unassigned for this shift.
+
+            if cache.is_on_leave(candidate_emp_id, date):
+                candidate_emp_id = 'empty'
                 continue
 
-            if local_employee == 'empty':
-                local_employee = cache.select_eligible_employee_for_rh(employee_ids, date, shift_id)
-                if local_employee is None:
-                    break  # No more eligible employees for this shift/week, leave the rest unassigned.
-            if cache.is_on_leave(local_employee, date):
-                local_employee = 'empty'
-                continue
+            cache.shifts_schedule[date][shift_id]["RH"] = candidate_emp_id
+            cache.assigned_employees_for_date[date].add(candidate_emp_id)
+            cache.employee_hours[candidate_emp_id]["completed_hours"] += cache.shifts[shift_id]["shift_duration"]
 
-            cache.shifts_schedule[date][shift_id]["RH"] = local_employee
-            cache.assigned_employees_for_date[date].add(local_employee)
-            cache.employee_hours[local_employee]["completed_hours"] += cache.shifts[shift_id]["shift_duration"]
-
-            if cache.employee_hours[local_employee]["completed_hours"] >= cache.employee_hours[local_employee]["target_hours"]:
-                local_employee = 'empty'
+            if cache.employee_hours[candidate_emp_id]["completed_hours"] >= cache.employee_hours[candidate_emp_id]["target_hours"]:
+                candidate_emp_id = 'empty'
 
 
     def _load_prev_month_shift_pattern(self, month, year, cache):
@@ -435,7 +436,7 @@ class ScheduleManager:
                             'Shift': shift_name,
                             'Employee': name,
                             'Type': 'Missing paramedic',
-                            'Description': 'Employee is not a paramedic'
+                            'Description': f'Employee is not a paramedic'
                         })
 
         return errors
@@ -460,7 +461,7 @@ class ScheduleManager:
                             'Shift': f'{shift_name}-{role}',
                             'Employee': name,
                             'Type': '11-hour rest',
-                            'Description': 'Less than 11h rest before {shift_name}-{role}'
+                            'Description': f'Less than 11h rest before {shift_name}-{role}'
                         })
 
         return errors
@@ -481,7 +482,7 @@ class ScheduleManager:
                             'Shift': f'{shift_name}-{role}',
                             'Employee': name,
                             'Type': 'On leave',
-                            'Description': 'On vacation but assigned to {shift_name}-{role}'
+                            'Description': f'On vacation but assigned to {shift_name}-{role}'
                         })
 
         return errors
@@ -508,7 +509,7 @@ class ScheduleManager:
                     'Shift': 'Night shifts',
                     'Employee': name,
                     'Type': 'Night shift limit',
-                    'Description': 'Worked ' + str(len(dates)) + ' night shifts (limit=5)'
+                    'Description': f'Worked {len(dates)} night shifts (limit=5)'
                 })
 
         return errors

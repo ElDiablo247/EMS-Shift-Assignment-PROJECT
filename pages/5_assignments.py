@@ -163,10 +163,10 @@ class AssignmentPage:
     def errors_section(self):
         """Section for scanning the schedule for constraint errors."""
         st.subheader("Errors Overview")
-        st.info("Scan for constraint errors (11-hour rest, double shifts, vacations, missing paramedics and night shift fairness).")
+        st.caption("Scan for constraint errors (11-hour rest, double shifts, vacations, missing paramedics and night shift fairness).")
 
         now = datetime.datetime.now()
-        col1, col2, col3 = st.columns([1, 1, 2])
+        col1, col2, col3 = st.columns([1, 1, 2], gap="small", vertical_alignment="bottom", width=580)
         with col1:
             v_month = st.selectbox("Month", range(1, 13), index=now.month - 1, key="v_month")
         with col2:
@@ -184,7 +184,7 @@ class AssignmentPage:
         if result is None:
             return
         if result:
-            st.error(f"Found {len(result)} error(s):")
+            st.error(f"Found {len(result)} error(s):", width=200)
             st.dataframe(
                 result,
                 column_config={
@@ -196,6 +196,7 @@ class AssignmentPage:
                 },
                 width='content',
                 hide_index=True,
+                height=450,
             )
         else:
             st.success("No errors found — schedule is clean!")
@@ -209,7 +210,7 @@ class AssignmentPage:
             with st.expander("Swap Shift Employees", expanded=False):
                 self.swap_shifts_section()
         
-        with st.container(border=True):
+        with st.container(border=True, width='content'):
             self.display_schedule_section()
 
         left, right = st.tabs(["Employee Hours", "Errors Overview"])
@@ -217,7 +218,7 @@ class AssignmentPage:
             with st.container(border=True, width='content'):
                 self.employee_hours_section()
         with right:
-            with st.container(border=True):
+            with st.container(border=True, width='content'):
                 self.errors_section()
 
 
